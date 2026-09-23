@@ -1,14 +1,14 @@
 # Resume Tailor
 
-React (Vite) frontend + FastAPI backend, with a JSON file as the datastore.
+React (Vite) frontend + FastAPI backend, with SQLite as the datastore.
 
 ```
 resume-tailor/
+├── start.bat           Windows launcher - starts both servers
 ├── backend/            FastAPI app
 │   ├── app/
 │   │   ├── main.py     app factory, CORS, router wiring
 │   │   ├── config.py   settings from env vars
-│   │   ├── db.py       JSON file store (atomic writes + lock)
 │   │   ├── schemas.py  pydantic request/response models
 │   │   ├── llm.py      OpenAI-compatible + Anthropic clients
 │   │   ├── prompts.py  profile + posting -> chat messages
@@ -30,10 +30,36 @@ resume-tailor/
         ├── components/  Header, Logo, ThemeToggle, UserCombobox, UserTable,
         │                Modal, Toast, JobForm, DateRangeFields,
         │                ExperienceFields, SimpleEntryFields, SkillsFields
-        └── pages/       HomePage, UserRegistrationPage
+        └── pages/       HomePage, UserRegistrationPage, RegistryPage
 ```
 
 ## Run it
+
+### Windows: `start.bat`
+
+Double-click `start.bat` in the project folder. It checks that Python and Node
+are on PATH, creates `backend\.venv` and installs `requirements.txt` the first
+time, runs `npm install` if `node_modules` is missing, then opens one window for
+the API and one for the web app and points your browser at
+<http://localhost:5173>.
+
+Each server gets its own window, so you can read its log and stop it with Ctrl+C
+without touching the other. Run it again later and it skips the install steps —
+the Python packages are reinstalled only when `requirements.txt` has actually
+changed, which it detects by comparing against the copy it keeps in the venv.
+
+If a port is already listening it leaves that server alone rather than starting
+a second one: a second uvicorn on a busy port exits immediately, and a second
+Vite quietly moves to 5174 and then talks to nothing.
+
+The backend window `cd`s into `backend\` before starting uvicorn, because
+`DATABASE_FILE` defaults to the relative path `data/resume-tailor.db` — started
+from anywhere else it would create a second, empty database in the wrong folder.
+
+A missing `backend\.env` is a warning, not an error: the app starts and every
+page works, but Generate and Humanize report that no model is configured.
+
+### By hand
 
 Two terminals.
 
@@ -81,6 +107,22 @@ scrolls narrows the viewport and nudges everything left.
 **Target role** and the generated resume on the right. Who you are tailoring
 for stays in view beside what came back, instead of scrolling away above it.
 Below 1060px the columns stack in that same order.
+
+In the **Selected** card, each experience/education/project note is cut off
+after three lines with an ellipsis and a **Show more** toggle
+(`components/ClampedText.jsx`), and the contact values, the entry titles
+(position · company, university, project name) and the dates all share one line
+each — the title is the part that shrinks and ellipsizes, since a clipped date
+range is unreadable while a clipped job title still says what the entry is.
+Below 560px the dates drop below the title instead, which would otherwise be
+squeezed to a few characters. A
+profile with four paragraph-long notes would otherwise push the target role and
+the result far down the page. The cut comes from `-webkit-line-clamp` rather
+than from slicing the string, so it lands at the real end of the third line
+whatever the column width and text-size setting are, and the toggle is rendered
+only when the text actually overflows — measured with a `ResizeObserver`, so it
+appears and disappears as the column or the text size changes. Truncated values
+carry a `title` with the full text.
 
 Selecting someone loads their full profile and reveals a **Target role**
 card: company name, position name, applying URL (optional) and the job
@@ -365,7 +407,7 @@ Base path `/api`.
 
 | Method   | Path                  | Notes                                       |
 | -------- | --------------------- | ------------------------------------------- |
-| `GET`    | `/health`             | liveness, JSON file path, LLM configured?   |
+| `GET`    | `/health`             | liveness, database path, LLM configured?    |
 | `GET`    | `/tailor/status`      | whether an LLM endpoint is configured       |
 | `POST`   | `/tailor`             | generate a tailored resume (503/502/504)    |
 | `GET`    | `/tailor/{id}`        | fetch a stored generation                   |
@@ -484,7 +526,7 @@ Three deliberate choices:
   that may have gone to two different places. Re-downloading the same file adds
   a row too — the registry records what happened, not what you meant.
 * **Read-only.** A record you can edit from the app is not much of a record;
-  correct a mistake in the day's JSON file.
+  correct a mistake with SQL against `registry` if you have to.
 
 Unlike the resume record, a row keeps the full job description — months later,
 "what was this job actually asking for" is the question a company name alone

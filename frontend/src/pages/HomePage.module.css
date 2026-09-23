@@ -143,11 +143,17 @@
   color: var(--text-muted);
 }
 
+/* One line, then an ellipsis. A long email or LinkedIn address used to wrap to
+   three lines and push the rest of the card down; the full value is on the
+   element's title, and LinkedIn is a link you can open regardless. */
 .details dd {
   margin: 2px 0 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: calc(15px * var(--font-scale));
   font-weight: 500;
-  word-break: break-word;
 }
 
 .subhead {
@@ -187,15 +193,35 @@
   border-left-color: var(--accent);
 }
 
+/* One line per entry head: the title takes whatever the dates leave and cuts
+   with an ellipsis. Letting it wrap instead would keep more of the title but
+   give every long entry a second line, which is the height this card is trying
+   not to spend. */
 .entryHead {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
+/* Narrow enough that a one-line head would leave the title a few characters:
+   the dates drop below and the title gets the full width. */
+@media (max-width: 560px) {
+  .entryHead {
+    flex-wrap: wrap;
+  }
+}
+
+/* One line, then an ellipsis. `flex-wrap` on the row above means a title that
+   is merely longish pushes the dates onto their own line first and gets the
+   whole width to itself; only a title too long even for that gets cut. The
+   full value is on the element's title attribute either way. */
 .company {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: calc(15px * var(--font-scale));
   font-weight: 600;
 }
@@ -206,17 +232,17 @@
 }
 
 .dates {
+  /* Never the item that shrinks: a clipped date range is unreadable, while a
+     clipped job title still tells you what the entry is. */
+  flex: 0 0 auto;
   font-size: calc(13px * var(--font-scale));
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-.details {
-  margin: 4px 0 0;
-  font-size: calc(14px * var(--font-scale));
-  color: var(--text);
-  white-space: pre-line;
-}
+/* The entry paragraphs that used to live here are `ClampedText` now. The rule
+   was also a second `.details` block: CSS Modules hash both to the same class,
+   so every declaration in it was landing on the contact <dl> above as well. */
 
 .skills {
   display: flex;

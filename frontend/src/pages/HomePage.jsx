@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import ClampedText from '../components/ClampedText.jsx'
 import UserCombobox from '../components/UserCombobox.jsx'
 import JobForm, { EMPTY_JOB, validateJob } from '../components/JobForm.jsx'
 import { useToast } from '../components/Toast.jsx'
@@ -320,21 +321,27 @@ export default function HomePage() {
             <section className={styles.card}>
               <h2 className={styles.cardTitle}>Selected</h2>
               <dl className={styles.details}>
+                {/* Each value is one line with an ellipsis past the column's
+                    width, so `title` is what makes the whole thing readable. */}
                 <div>
                   <dt>Name</dt>
-                  <dd>{selected.full_name}</dd>
+                  <dd title={selected.full_name}>{selected.full_name}</dd>
                 </div>
                 <div>
                   <dt>Email</dt>
-                  <dd>{selected.email ?? <span className={styles.missing}>Not set</span>}</dd>
+                  <dd title={selected.email ?? undefined}>
+                    {selected.email ?? <span className={styles.missing}>Not set</span>}
+                  </dd>
                 </div>
                 <div>
                   <dt>Phone</dt>
-                  <dd>{selected.phone ?? <span className={styles.missing}>Not set</span>}</dd>
+                  <dd title={selected.phone ?? undefined}>
+                    {selected.phone ?? <span className={styles.missing}>Not set</span>}
+                  </dd>
                 </div>
                 <div>
                   <dt>LinkedIn</dt>
-                  <dd>
+                  <dd title={selected.linkedin_url ?? undefined}>
                     {selected.linkedin_url ? (
                       <a
                         className={styles.inlineLink}
@@ -364,7 +371,10 @@ export default function HomePage() {
                   {selected.experiences.map((exp) => (
                     <li key={exp.id} className={styles.entry}>
                       <div className={styles.entryHead}>
-                        <span className={styles.company}>
+                        <span
+                          className={styles.company}
+                          title={[exp.position, exp.company].filter(Boolean).join(' · ')}
+                        >
                           {exp.position ? (
                             <>
                               {exp.position}
@@ -381,7 +391,7 @@ export default function HomePage() {
                           {exp.is_current ? 'Present' : formatMonth(exp.end_date)}
                         </span>
                       </div>
-                      <p className={styles.details}>{exp.details}</p>
+                      <ClampedText text={exp.details} />
                     </li>
                   ))}
                 </ol>
@@ -402,13 +412,15 @@ export default function HomePage() {
                     {selected.education.map((edu) => (
                       <li key={edu.id} className={styles.entry}>
                         <div className={styles.entryHead}>
-                          <span className={styles.company}>{edu.university}</span>
+                          <span className={styles.company} title={edu.university}>
+                            {edu.university}
+                          </span>
                           <span className={styles.dates}>
                             {formatMonth(edu.start_date)} —{' '}
                             {edu.is_current ? 'Present' : formatMonth(edu.end_date)}
                           </span>
                         </div>
-                        {edu.details && <p className={styles.details}>{edu.details}</p>}
+                        <ClampedText text={edu.details} />
                       </li>
                     ))}
                   </ol>
@@ -423,13 +435,15 @@ export default function HomePage() {
                     {selected.projects.map((proj) => (
                       <li key={proj.id} className={styles.entry}>
                         <div className={styles.entryHead}>
-                          <span className={styles.company}>{proj.name}</span>
+                          <span className={styles.company} title={proj.name}>
+                            {proj.name}
+                          </span>
                           <span className={styles.dates}>
                             {formatMonth(proj.start_date)} —{' '}
                             {proj.is_current ? 'Present' : formatMonth(proj.end_date)}
                           </span>
                         </div>
-                        {proj.details && <p className={styles.details}>{proj.details}</p>}
+                        <ClampedText text={proj.details} />
                       </li>
                     ))}
                   </ol>

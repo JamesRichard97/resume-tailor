@@ -1,0 +1,52 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.clamped,
+.full {
+  margin: 4px 0 0;
+  min-width: 0;
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.55;
+  color: var(--text);
+  /* Keeps the blank lines and manual line breaks someone typed into the
+     details box; without it a three-line note collapses into one. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* -webkit-line-clamp is the only way to get a real ellipsis at the end of the
+   Nth line. It is prefixed but implemented in every current browser, and the
+   unprefixed `line-clamp` is here for the ones that have caught up. Both need
+   the -webkit-box display to take effect. */
+.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--clamp-lines, 3);
+  line-clamp: var(--clamp-lines, 3);
+  overflow: hidden;
+}
+
+.toggle {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
