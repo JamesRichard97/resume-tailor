@@ -1,0 +1,107 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--header-height);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+}
+
+.inner {
+  height: 100%;
+  /* Matches the page width for the current route, so the brand and nav line up
+     with the cards below instead of floating in from the side on the wide
+     pages. App sets --page-max on the shell. */
+  max-width: var(--page-max, 920px);
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--radius-sm);
+}
+
+.wordmark {
+  font-size: calc(16px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* Without this the nav refuses to shrink and pushes the theme toggle off the
+     screen — which is what happens on a phone at the largest text size. */
+  min-width: 0;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  /* Last resort on a narrow screen with large text: the nav scrolls sideways
+     within itself rather than making the whole page scroll. The scrollbar is
+     hidden because the items are obvious enough to swipe. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
+.link {
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.link:hover {
+  background: var(--bg-tint);
+  color: var(--text);
+}
+
+.linkActive,
+.linkActive:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.divider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+@media (max-width: 560px) {
+  .wordmark {
+    display: none;
+  }
+
+  .inner {
+    padding: 0 14px;
+  }
+
+  .link {
+    padding: 7px 9px;
+    font-size: calc(14px * var(--font-scale));
+  }
+}

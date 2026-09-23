@@ -1,0 +1,22 @@
+.button {
+  display: grid;
+  place-items: center;
+  width: var(--control-lg);
+  height: var(--control-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.button:hover {
+  background: var(--bg-tint);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.button:active {
+  transform: translateY(0.5px);
+}

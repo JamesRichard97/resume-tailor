@@ -1,0 +1,160 @@
+.root {
+  position: relative;
+  width: 100%;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 6px 0 12px;
+  height: var(--field-height);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.control:hover {
+  border-color: var(--text-muted);
+}
+
+.controlOpen,
+.control:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.controlDisabled {
+  background: var(--bg);
+  border-color: var(--border);
+  cursor: not-allowed;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: calc(15px * var(--font-scale));
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.controlDisabled .input {
+  cursor: not-allowed;
+}
+
+.control:hover .toggle {
+  color: var(--text);
+}
+
+.clear,
+.toggle {
+  display: grid;
+  place-items: center;
+  width: var(--control-md);
+  height: var(--control-md);
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  flex: none;
+}
+
+.clear {
+  font-size: calc(19px * var(--font-scale));
+  line-height: 1;
+}
+
+.clear:hover,
+.toggle:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.listbox {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  list-style: none;
+  /* A raised surface, not --surface: in dark mode the dropdown sits on a card
+     of the same colour and shadows barely register, so the lift has to come
+     from the fill and the border. */
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  animation: drop 0.16s var(--ease) both;
+}
+
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.optionActive {
+  background: var(--bg);
+}
+
+.optionSelected {
+  background: var(--accent-soft);
+}
+
+.optionSelected.optionActive {
+  background: var(--accent-soft-strong);
+}
+
+.optionName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 500;
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.optionMeta {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty {
+  padding: 12px 10px;
+  font-size: calc(14px * var(--font-scale));
+  color: var(--text-muted);
+  text-align: center;
+}

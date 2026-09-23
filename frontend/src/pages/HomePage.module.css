@@ -1,0 +1,414 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.intro h1 {
+  font-size: calc(26px * var(--font-scale));
+}
+
+.lede {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: calc(15px * var(--font-scale));
+}
+
+.inlineLink {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}
+
+/* Person on the left, application on the right. The left column is given a
+   range rather than a fraction: the profile has a comfortable width and stops
+   benefiting past it, while the resume preview on the right should take
+   whatever is left. */
+.columns {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(360px, 500px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  /* Lets the children shrink inside the grid track instead of forcing it
+     wider — a long resume line would otherwise widen the whole column. */
+  min-width: 0;
+}
+
+/* One column once two would leave each too narrow to be worth the split. */
+@media (max-width: 1060px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Placeholder for the right column, so the page does not look broken before
+   anything has been generated. */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 40px 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.placeholderTitle {
+  margin: 0;
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 600;
+}
+
+.placeholderText {
+  margin: 0;
+  max-width: 44ch;
+  margin-inline: auto;
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.5;
+}
+
+.card {
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 16px;
+  }
+}
+
+.cardTitle {
+  margin-bottom: 14px;
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.linkButton {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: calc(13px * var(--font-scale));
+  text-decoration: underline;
+}
+
+.error {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.details {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.details dt {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.details dd {
+  margin: 2px 0 0;
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  letter-spacing: 0;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  padding-left: 14px;
+  border-left: 2px solid var(--border-strong);
+}
+
+.entry:first-child {
+  border-left-color: var(--accent);
+}
+
+.entryHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.company {
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 600;
+}
+
+.at {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.dates {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.details {
+  margin: 4px 0 0;
+  font-size: calc(14px * var(--font-scale));
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.skills {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.skillGroup dt {
+  margin-bottom: 5px;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+.chip {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
+}
+
+.noExperience {
+  margin: 0;
+  padding: 14px 0;
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.missing {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.warning {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.warning code {
+  font-size: calc(13px * var(--font-scale));
+  word-break: break-all;
+}
+
+.cardLede {
+  margin: 8px 0 18px;
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.resultHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.resultMeta {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: calc(13.5px * var(--font-scale));
+}
+
+.resultActions {
+  display: flex;
+  gap: 8px;
+}
+
+.ghost {
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease);
+}
+
+.ghost:hover {
+  background: var(--bg-tint);
+}
+
+.primaryGhost {
+  padding: 7px 12px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease);
+}
+
+.primaryGhost:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.primaryGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.primaryGhost:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Original / Humanized switch above the preview. */
+.versions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tab {
+  padding: 5px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: calc(13.5px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.tab:hover {
+  background: var(--bg-tint);
+  color: var(--text);
+}
+
+.tabActive,
+.tabActive:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.versionNote {
+  margin-left: 4px;
+  color: var(--text-subtle);
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* The model returns Markdown; shown as-is rather than rendered, so what you
+   copy is exactly what you see. */
+.resume {
+  margin: 0;
+  padding: 18px;
+  max-height: 620px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: calc(13.5px * var(--font-scale));
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

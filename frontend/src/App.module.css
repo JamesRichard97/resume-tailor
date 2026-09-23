@@ -1,0 +1,36 @@
+.shell {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  width: 100%;
+  /* Above the starfield. Without a stacking position of its own, a fixed
+     canvas with z-index 0 paints over static page content. */
+  position: relative;
+  z-index: 1;
+  max-width: var(--page-max, 920px);
+  margin: 0 auto;
+  padding: 36px 20px 80px;
+  animation: rise 0.28s var(--ease) both;
+}
+
+/* Width comes from --page-max, set on the shell per route (see App.jsx), so the
+   header and the page always agree. Reading-width is right for a form or a
+   resume preview; the two-column tailor page and the registry's seven-column
+   table need the room. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (max-width: 560px) {
+  .main {
+    padding: 24px 14px 56px;
+  }
+}

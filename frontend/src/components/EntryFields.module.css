@@ -1,0 +1,210 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+  text-align: center;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.row:disabled {
+  opacity: 0.6;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--danger);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  text-decoration: underline;
+}
+
+/* Two across: dates on one line, the text fields on the next. Four across is
+   too cramped at this card width. */
+.grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+.wide {
+  grid-column: span 1;
+}
+
+@media (max-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.label {
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+
+.required {
+  margin-left: 3px;
+  color: var(--danger);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: calc(15px * var(--font-scale));
+  outline: none;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.55;
+}
+
+.input:hover:not(:disabled),
+.textarea:hover {
+  border-color: var(--text-muted);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.input:disabled {
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.inputError,
+.inputError:hover {
+  border-color: var(--danger);
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 3px var(--ring-danger);
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.checkbox input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.fieldError {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--danger);
+}
+
+.add {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.add:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* One text field spanning both columns (education, projects). */
+.full {
+  grid-column: 1 / -1;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+  min-height: 22px;
+}
+
+.chip {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.chipsEmpty {
+  color: var(--text-subtle);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 22px;
+}
+
+.hintInline {
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-subtle);
+}

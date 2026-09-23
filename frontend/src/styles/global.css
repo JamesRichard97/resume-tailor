@@ -1,0 +1,250 @@
+/*
+ * Design tokens.
+ *
+ * Every colour in the app comes from here, so dark mode is a matter of
+ * redefining the tokens rather than touching each component. The theme is set
+ * as `data-theme` on <html> by the inline script in index.html (before first
+ * paint) and kept in sync by useTheme.
+ */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg: #f7f8fa;
+  --bg-tint: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-raised: #ffffff;
+  --header-bg: rgba(255, 255, 255, 0.82);
+
+  /* Lines */
+  --border: #e4e7ec;
+  --border-strong: #cfd4dc;
+
+  /* Text */
+  --text: #14171f;
+  --text-muted: #667085;
+  /* Passes 3:1 on both --surface and --bg, so it stays safe if it is ever
+     used for text rather than just the scrollbar thumb. */
+  --text-subtle: #828b9a;
+
+  /* Accent */
+  --accent: #2f5bd7;
+  --accent-hover: #2749b4;
+  --accent-soft: #eaf0fd;
+  --accent-soft-strong: #d7e2fb;
+  --on-accent: #ffffff;
+
+  /* Status */
+  --danger: #c0392b;
+  --danger-hover: #a3301f;
+  --danger-soft: #fdecea;
+  --on-danger: #ffffff;
+  --success: #1e7a4b;
+  --success-soft: #e6f4ec;
+
+  /* Depth */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 6px 16px -4px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 4px 6px -2px rgba(16, 24, 40, 0.04),
+    0 12px 28px -6px rgba(16, 24, 40, 0.14);
+  --ring: rgba(47, 91, 215, 0.18);
+  --ring-danger: rgba(192, 57, 43, 0.16);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Surfaces — layered greys, slightly blue, so cards lift off the page */
+  --bg: #0e1015;
+  --bg-tint: #171a21;
+  --surface: #171a21;
+  --surface-2: #1d212a;
+  --surface-raised: #232833;
+  --header-bg: rgba(23, 26, 33, 0.82);
+
+  --border: #272c37;
+  --border-strong: #39404e;
+
+  /* Slightly under pure white: less glare on a dark field */
+  --text: #e7eaf0;
+  --text-muted: #98a2b3;
+  --text-subtle: #6b7688;
+
+  /* Lifted accent — #2f5bd7 fails contrast against a dark surface */
+  --accent: #7d9dfb;
+  --accent-hover: #9ab3fc;
+  --accent-soft: #1b2438;
+  --accent-soft-strong: #24304a;
+  --on-accent: #0e1015;
+
+  --danger: #f2837a;
+  --danger-hover: #f79e96;
+  --danger-soft: #2e1a19;
+  --on-danger: #0e1015;
+  --success: #6ec996;
+  --success-soft: #16261f;
+
+  /* Shadows read as almost nothing on dark; borders do the lifting instead */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 16px -4px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 4px 6px -2px rgba(0, 0, 0, 0.3),
+    0 12px 28px -6px rgba(0, 0, 0, 0.55);
+  --ring: rgba(125, 157, 251, 0.25);
+  --ring-danger: rgba(242, 131, 122, 0.22);
+}
+
+:root {
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --header-height: 60px;
+
+  /* One width for every page, used by both the header and <main>.
+     It used to vary per route — which meant the nav and the header buttons
+     visibly jumped sideways every time you changed page. A stable chrome is
+     worth more than a per-page ideal measure. */
+  --page-max: 1440px;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* Every font-size in the app is calc(Npx * var(--font-scale)), so this one
+     number resizes all text without touching the layout. The header control
+     sets it on <html>; index.html applies the stored value before first paint
+     so the page never renders at one size and jumps to another.
+
+     Only type scales — padding, borders and radii stay put. That is deliberate:
+     it keeps the layout stable, and the few fixed-size icon buttons that hold a
+     glyph are sized off the scale below so nothing clips at the large end. */
+  --font-scale: 1;
+
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  font-synthesis-weight: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* A square control sized to fit its glyph at any scale. Used by the header
+   buttons, the combobox affordances, and the dialog and toast close buttons. */
+:root {
+  --control-sm: calc(24px * var(--font-scale));
+  --control-md: calc(28px * var(--font-scale));
+  --control-lg: calc(34px * var(--font-scale));
+  --field-height: calc(44px * var(--font-scale));
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+html {
+  /* Reserve the scrollbar's width whether or not the page needs one. Without
+     this, moving from a page that fits to a page that scrolls narrows the
+     viewport by the scrollbar's width, and everything — including the header
+     buttons — shifts sideways. */
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: calc(16px * var(--font-scale));
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Only colours animate on a theme switch — layout must not. */
+body,
+body * {
+  transition: background-color 0.2s var(--ease), border-color 0.2s var(--ease),
+    color 0.2s var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+h1 {
+  font-size: calc(28px * var(--font-scale));
+  line-height: 1.25;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+::selection {
+  background: var(--accent-soft-strong);
+  color: var(--text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Scrollbars that don't glare in dark mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-subtle);
+  background-clip: content-box;
+}

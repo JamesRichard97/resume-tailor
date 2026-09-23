@@ -1,0 +1,520 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.intro h1 {
+  font-size: calc(26px * var(--font-scale));
+}
+
+.lede {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: calc(15px * var(--font-scale));
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 560px) {
+  .card {
+    padding: 16px;
+  }
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.count {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  letter-spacing: 0;
+}
+
+/* -- filters ------------------------------------------------------------- */
+
+.filters {
+  /* Flex rather than grid: the four controls sit in a row while there is room
+     and wrap when there is not, and the button keeps its own width instead of
+     stretching across a column. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-tint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.filters .field {
+  flex: 1 1 165px;
+}
+
+.filters .clear {
+  flex: 0 0 auto;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.label {
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: calc(15px * var(--font-scale));
+  outline: none;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.input:hover {
+  border-color: var(--text-muted);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.clear,
+.ghost {
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease);
+}
+
+.clear:hover:not(:disabled),
+.ghost:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.clear:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* -- table --------------------------------------------------------------- */
+
+.scroll {
+  /* Pagination bounds the list now; this only has to fit a full page of 20
+     rows, while still scrolling rather than running off a small screen. */
+  max-height: min(78vh, 980px);
+  /* Vertical only. The layout below fits the container, so a horizontal
+     scrollbar could only ever be a bug. */
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.table {
+  width: 100%;
+  /* Fixed: columns take the widths below instead of stretching to fit their
+     content, so a long job description wraps or truncates rather than pushing
+     the table sideways. */
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: calc(15px * var(--font-scale));
+}
+
+.table th,
+.table td {
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border);
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: var(--surface-2);
+  border-bottom-color: var(--border-strong);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover {
+  background: var(--bg-tint);
+}
+
+.rowOpen,
+.rowOpen:hover {
+  background: var(--accent-soft);
+}
+
+.rowOpen td {
+  border-bottom-color: transparent;
+}
+
+/* Percentages only, summing to 100 at every breakpoint. A fixed-px column
+   mixed in here is what produces a horizontal scrollbar on a narrow screen:
+   table-layout: fixed resolves the percentages against the table width, so
+   px + 100% always overflows. The chevron and the posting link live inside the
+   Applied and Company cells for the same reason. */
+.colWhen { width: 14%; }
+.colUser { width: 12%; }
+.colCompany { width: 12%; }
+.colPosition { width: 14%; }
+.colUrl { width: 16%; }
+.colResume { width: 18%; }
+.colJob { width: 14%; }
+
+.sortButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  color: var(--text);
+  background: var(--bg-tint);
+}
+
+.sortActive {
+  color: var(--accent);
+}
+
+.arrow {
+  font-size: calc(10px * var(--font-scale));
+  opacity: 0.75;
+}
+
+.truncate,
+.whenCell > span,
+.urlLink > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Flex rows inside a fixed-layout cell. min-width: 0 lets the text child
+   shrink and ellipsis instead of pushing the column wider. */
+.whenCell,
+.urlLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.whenCell > span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The whole cell is the link, so the click target is the width of the column
+   rather than a 10px arrow. */
+.urlLink {
+  text-decoration: none;
+}
+
+/* shrink-only, so the arrow sits beside the text rather than being pushed to
+   the far edge of the column */
+.urlLink > span:first-child {
+  flex: 0 1 auto;
+}
+
+.external {
+  flex: 0 0 auto;
+  font-size: calc(12px * var(--font-scale));
+  opacity: 0.8;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(13.5px * var(--font-scale));
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.link {
+  color: var(--accent);
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.cellLink {
+  text-align: center;
+}
+
+.toggle {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.chevron,
+.chevronOpen {
+  display: block;
+  font-size: calc(17px * var(--font-scale));
+  line-height: 1;
+  transition: transform 0.15s var(--ease);
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+/* -- expanded detail ----------------------------------------------------- */
+
+.detailRow,
+.detailRow:hover {
+  background: var(--accent-soft);
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 4px 8px;
+}
+
+.detailBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailLabel {
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.resumeName {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: calc(14px * var(--font-scale));
+  /* Wraps rather than truncating: the column already shows the start, so what
+     this is here for is the company and position at the end. */
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.description {
+  /* Tall enough for a real posting, capped so one long description cannot
+     push the rest of the table off screen. */
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.55;
+  /* The posting's own blank lines and bullet layout are part of its meaning. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* -- states -------------------------------------------------------------- */
+
+.state {
+  margin: 0;
+  padding: 36px 16px;
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+  text-align: center;
+}
+
+.errorState {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.emptyBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.emptyTitle {
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 600;
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(14px * var(--font-scale));
+}
+
+.footnote {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Below these widths the table cannot stay honest, so the least essential
+   columns drop out in turn rather than forcing a sideways scroll. Everything
+   they held is still in the expanded detail panel, and the remaining widths
+   are re-balanced to keep summing to 100%. */
+@media (max-width: 1200px) {
+  .colJob,
+  .cellJob {
+    display: none;
+  }
+
+  .colWhen { width: 16%; }
+  .colUser { width: 14%; }
+  .colCompany { width: 14%; }
+  .colPosition { width: 16%; }
+  .colUrl { width: 19%; }
+  .colResume { width: 21%; }
+}
+
+@media (max-width: 980px) {
+  .colResume,
+  .cellResume {
+    display: none;
+  }
+
+  .colWhen { width: 20%; }
+  .colUser { width: 17%; }
+  .colCompany { width: 17%; }
+  .colPosition { width: 20%; }
+  .colUrl { width: 26%; }
+}
+
+@media (max-width: 760px) {
+  .colPosition,
+  .cellPosition {
+    display: none;
+  }
+
+  .colWhen { width: 24%; }
+  .colUser { width: 21%; }
+  .colCompany { width: 21%; }
+  .colUrl { width: 34%; }
+}
+
+@media (max-width: 620px) {
+  .colUrl,
+  .cellUrl {
+    display: none;
+  }
+
+  /* The timestamp is the one value that must not truncate here, so it takes
+     the room the dropped columns freed up. */
+  .colWhen { width: 44%; }
+  .colUser { width: 26%; }
+  .colCompany { width: 30%; }
+
+  .table th,
+  .table td {
+    padding: 9px 8px;
+  }
+
+  .sortButton {
+    padding: 10px 8px;
+  }
+}

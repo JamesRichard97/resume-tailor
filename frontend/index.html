@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Resume Tailor</title>
+    <meta name="description" content="Tailor a resume to a role." />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Browser UI (address bar, form controls) follows the active theme. -->
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#12141a" />
+
+    <!--
+      Apply the stored theme and text size before first paint. Without this the
+      page renders light for a frame and then flips — the classic dark-mode
+      flash — and text would visibly resize on every load.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('rt-theme')
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : stored === 'system'
+                ? window.matchMedia('(prefers-color-scheme: dark)').matches
+                  ? 'dark'
+                  : 'light'
+                // No choice on record: dark is the default.
+                : 'dark'
+          document.documentElement.dataset.theme = theme
+        } catch (e) {
+          document.documentElement.dataset.theme = 'dark'
+        }
+
+        try {
+          // Clamped rather than trusted: a stray value here would resize every
+          // piece of text in the app.
+          var scale = parseFloat(localStorage.getItem('rt-font-scale'))
+          if (scale >= 0.9 && scale <= 1.4) {
+            document.documentElement.style.setProperty('--font-scale', scale)
+          }
+        } catch (e) {
+          /* keep the stylesheet default */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

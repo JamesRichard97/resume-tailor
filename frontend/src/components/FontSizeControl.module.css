@@ -1,0 +1,83 @@
+.group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.button {
+  display: grid;
+  place-items: center;
+  height: var(--control-md);
+  min-width: var(--control-md);
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.button:hover:not(:disabled) {
+  background: var(--bg-tint);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+
+.button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* The two A's are the control's whole vocabulary, so they are sized in fixed
+   px rather than scaled: the small one must stay visibly smaller than the
+   large one at every setting, and a control that grows as you press it walks
+   away from the cursor. */
+.small {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.large {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.middle {
+  min-width: 44px;
+}
+
+.percent {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Below this the header is tight enough that the theme toggle and the nav
+   need the room more than a size control that is rarely touched twice. */
+@media (max-width: 720px) {
+  .group {
+    display: none;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

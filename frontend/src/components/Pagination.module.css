@@ -1,0 +1,112 @@
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.count {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+}
+
+.count strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sizeLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+  white-space: nowrap;
+}
+
+.size {
+  padding: 4px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(13px * var(--font-scale));
+  outline: none;
+}
+
+.size:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.pages {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.page,
+.step {
+  min-width: var(--control-md);
+  height: var(--control-md);
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.15s var(--ease), color 0.15s var(--ease),
+    border-color 0.15s var(--ease);
+}
+
+.page:hover:not(:disabled),
+.step:hover:not(:disabled) {
+  background: var(--bg-tint);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.step {
+  font-size: calc(16px * var(--font-scale));
+  line-height: 1;
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.current,
+.current:hover {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.gap {
+  padding: 0 2px;
+  color: var(--text-subtle);
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* On a phone the row count and the controls each get their own line rather
+   than squeezing together. */
+@media (max-width: 560px) {
+  .bar {
+    justify-content: center;
+  }
+
+  .controls {
+    gap: 10px;
+  }
+}

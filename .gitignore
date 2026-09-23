@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets
+#
+# `.env` alone was not enough: `.env.production` is the name the sample files
+# actually tell you to use, and it would have been committed with your API keys
+# in it. Ignore every .env variant, then add back the two that are meant to be
+# shared — they contain placeholders, not values.
+.env
+.env.*
+!.env.example
+!.env.*.example
+# (env.production.sample has no leading dot, so no pattern above touches it.)
+
+# Data
+#
+# Everything the app stores lives in backend/data/: the SQLite database and its
+# -wal/-shm companions, plus anything left over from the JSON era. All of it
+# holds real people's names, emails, phone numbers, LinkedIn profiles, full work
+# histories and the job descriptions they applied against — none of it belongs
+# in a repository.
+#
+# Ignoring the directory rather than listing file patterns means a new kind of
+# file appearing in there is private by default, which is the right way round
+# for a folder that holds personal data.
+backend/data/*
+!backend/data/.gitkeep
+
+# Node
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

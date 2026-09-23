@@ -1,0 +1,15 @@
+.canvas {
+  /* Fixed, so the sky stays put while the page scrolls — a starfield that
+     scrolls away reads as a decorated header, not a background. */
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  /* Decoration only: every click, drag and text selection passes straight
+     through to the app underneath. */
+  pointer-events: none;
+  /* Its own layer, so repainting the stars never forces the page content to
+     repaint with them. */
+  will-change: transform;
+}
