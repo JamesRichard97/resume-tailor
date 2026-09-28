@@ -255,6 +255,40 @@
   text-overflow: ellipsis;
 }
 
+/* The whole row copies the application, so it reads as a control: a pointer,
+   a hover tint, and a visible focus ring for the keyboard. The buttons and the
+   link inside it keep their own behaviour. */
+.clickRow {
+  cursor: pointer;
+}
+
+.clickRow:hover > td {
+  background: var(--bg-tint);
+}
+
+.clickRow:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* A cell that carries a copy button: text on the left, taking whatever space
+   is left after the button, and the button pinned at the end. The truncation
+   stays on the text, so the button is never eaten by an ellipsis. */
+.copyCell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.copyCell > :first-child {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* Flex rows inside a fixed-layout cell. min-width: 0 lets the text child
    shrink and ellipsis instead of pushing the column wider. */
 .whenCell,

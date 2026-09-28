@@ -39,7 +39,7 @@ logger = logging.getLogger("uvicorn.error")
 
 _local = threading.local()
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 4
 
 # Schema notes:
 #
@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS users (
     linkedin_url TEXT,
     email        TEXT,
     phone        TEXT,
+    location     TEXT,
     created_at   TEXT,
     updated_at   TEXT
 );
@@ -85,6 +86,26 @@ CREATE TABLE IF NOT EXISTS experiences (
     is_current INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS experiences_user ON experiences (user_id, sort_order);
+
+-- Sentences added to a role with the Insert button, kept out of experiences.details
+-- on purpose. Two different things live here and mixing them loses information:
+-- `details` is what the candidate typed about their own work, and a sentence
+-- inserted from a posting is a suggestion they have not yet made their own.
+-- Once merged into one text column there is no way to tell them apart again,
+-- so "clear the suggestions and leave what I wrote" becomes impossible. A
+-- separate table keeps that distinction, and the cascade means clearing them
+-- can never touch the details.
+CREATE TABLE IF NOT EXISTS inserted_sentences (
+    id            TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    experience_id TEXT NOT NULL REFERENCES experiences(id) ON DELETE CASCADE,
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    sentence      TEXT NOT NULL,
+    created_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS inserted_user ON inserted_sentences (user_id);
+CREATE INDEX IF NOT EXISTS inserted_experience
+    ON inserted_sentences (experience_id, sort_order);
 
 CREATE TABLE IF NOT EXISTS education (
     id         TEXT PRIMARY KEY,
@@ -135,7 +156,9 @@ CREATE TABLE IF NOT EXISTS resumes (
     humanized_json  TEXT,
     humanized_model TEXT,
     humanized_at    TEXT,
-    ignored_changes TEXT
+    ignored_changes TEXT,
+    -- What the generation cost, as the provider reported it.
+    usage_json      TEXT
 );
 CREATE INDEX IF NOT EXISTS resumes_generated ON resumes (generated_at DESC);
 
@@ -237,11 +260,39 @@ def set_meta(conn: sqlite3.Connection, key: str, value: str) -> None:
     )
 
 
+# Columns added after the first release. CREATE TABLE IF NOT EXISTS is a no-op
+# on a table that already exists, so a column added to SCHEMA above never
+# reaches a database someone has already been using — the app would start
+# cleanly and then fail on the first query naming it. These are applied by
+# _add_missing_columns below.
+#
+# Additive only: a new nullable column reads as NULL on every existing row,
+# which is exactly what "nothing was recorded for this one" means. Anything
+# that drops or retypes a column needs a real migration, not this list.
+_COLUMNS_ADDED_LATER: dict[str, tuple[tuple[str, str], ...]] = {
+    "users": (("location", "TEXT"),),
+    "resumes": (("usage_json", "TEXT"),),
+}
+
+
+def _add_missing_columns(conn: sqlite3.Connection) -> None:
+    """Bring existing tables up to the current column set."""
+    for table, columns in _COLUMNS_ADDED_LATER.items():
+        have = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if not have:
+            continue  # The table was just created from SCHEMA; it is current.
+        for name, decl in columns:
+            if name not in have:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+                logger.info("Added %s.%s to an existing database", table, name)
+
+
 def init() -> None:
     """Create the schema if it is not there. Safe to call on every startup."""
     conn = connect()
     conn.executescript(SCHEMA)
     with transaction() as tx:
+        _add_missing_columns(tx)
         set_meta(tx, "schema_version", str(SCHEMA_VERSION))
     logger.info("SQLite database ready at %s", path())
 

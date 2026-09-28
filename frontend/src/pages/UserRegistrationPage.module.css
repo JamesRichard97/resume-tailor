@@ -45,40 +45,6 @@
   gap: 14px;
 }
 
-/* The dialog owns the height; the body scrolls, the footer stays put. */
-.modalForm {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.modalBody {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px 22px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 14px 22px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-@media (max-width: 560px) {
-  .modalBody,
-  .modalFooter {
-    padding-left: 16px;
-    padding-right: 16px;
-  }
-}
-
 .cardTitle {
   display: flex;
   align-items: center;
@@ -98,83 +64,6 @@
   color: var(--text);
   font-size: calc(12px * var(--font-scale));
   letter-spacing: 0;
-}
-
-.row {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
-}
-
-.sectionTitle {
-  font-size: calc(14px * var(--font-scale));
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.label {
-  font-size: calc(14px * var(--font-scale));
-  font-weight: 600;
-}
-
-.required {
-  margin-left: 3px;
-  color: var(--danger);
-}
-
-.input {
-  width: 100%;
-  padding: 10px 12px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius);
-  font-size: calc(15px * var(--font-scale));
-  outline: none;
-  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
-}
-
-.input:hover {
-  border-color: var(--text-muted);
-}
-
-.input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.inputError,
-.inputError:hover {
-  border-color: var(--danger);
-}
-
-.inputError:focus {
-  box-shadow: 0 0 0 3px var(--ring-danger);
-}
-
-.hint {
-  font-size: calc(13px * var(--font-scale));
-  color: var(--text-muted);
-}
-
-.fieldError {
-  font-size: calc(13px * var(--font-scale));
-  color: var(--danger);
 }
 
 .error {
@@ -208,13 +97,6 @@
 .success .linkButton {
   color: inherit;
   font-size: inherit;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding-top: 4px;
 }
 
 .primary,

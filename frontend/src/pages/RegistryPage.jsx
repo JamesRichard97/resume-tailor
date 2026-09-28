@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { api } from '../api/client.js'
+import CopyButton from '../components/CopyButton.jsx'
 import Pagination from '../components/Pagination.jsx'
+import { useToast } from '../components/Toast.jsx'
 import { usePagination } from '../hooks/usePagination.js'
+import { formatJob } from '../lib/jobClipboard.js'
 import styles from './RegistryPage.module.css'
 
 // Every column can be sorted. `get` returns the value to compare; strings are
@@ -69,6 +72,7 @@ function formatWhen(iso) {
 const EMPTY_FILTERS = { user: '', company: '', from: '', to: '' }
 
 export default function RegistryPage() {
+  const toast = useToast()
   const [entries, setEntries] = useState([])
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [error, setError] = useState('')
@@ -135,6 +139,30 @@ export default function RegistryPage() {
 
   const setFilter = (key) => (event) =>
     setFilters((prev) => ({ ...prev, [key]: event.target.value }))
+
+  /** Clicking a row copies the whole application, in the format the tailor
+   *  page's "Paste from clipboard" reads back. Copying one field at a time is
+   *  what the per-cell buttons are for; this is for applying to the same job
+   *  again. */
+  const copyRow = async (entry) => {
+    const text = formatJob(entry)
+    if (!text) {
+      toast.info('Nothing to copy', 'This row has no job details saved.')
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      toast.success(
+        'Application copied',
+        `${entry.position || 'This role'}${entry.company ? ` at ${entry.company}` : ''} \u2014 paste it into the tailor page.`,
+      )
+    } catch {
+      toast.error(
+        'Could not copy',
+        'Your browser blocked clipboard access. The buttons in each cell copy one field at a time.',
+      )
+    }
+  }
 
   const isFiltered = Object.values(filters).some(Boolean)
 
@@ -311,7 +339,24 @@ export default function RegistryPage() {
                     return [
                       <tr
                         key={entry.id}
-                        className={open ? styles.rowOpen : undefined}
+                        className={`${styles.clickRow} ${open ? styles.rowOpen : ''}`}
+                        // A row is a control now, so it answers to the
+                        // keyboard as well as the mouse. The buttons and the
+                        // link inside it stop their own clicks, so pressing
+                        // one never also copies the row.
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`Copy this application: ${entry.position || 'role'}${
+                          entry.company ? ` at ${entry.company}` : ''
+                        }`}
+                        title="Click to copy this application"
+                        onClick={() => copyRow(entry)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            copyRow(entry)
+                          }
+                        }}
                       >
                         <td className={styles.cellWhen}>
                           <div className={styles.whenCell}>
@@ -320,7 +365,10 @@ export default function RegistryPage() {
                               className={styles.toggle}
                               aria-expanded={open}
                               aria-label={open ? 'Hide details' : 'Show details'}
-                              onClick={() => setExpanded(open ? null : entry.id)}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                setExpanded(open ? null : entry.id)
+                              }}
                             >
                               <span className={open ? styles.chevronOpen : styles.chevron}>
                                 ›
@@ -337,34 +385,50 @@ export default function RegistryPage() {
                         <td className={styles.truncate} title={entry.full_name}>
                           {entry.full_name || '—'}
                         </td>
-                        <td className={styles.truncate} title={entry.company}>
-                          {entry.company || '—'}
+                        <td className={styles.cellCompany} title={entry.company}>
+                          {/* The text keeps the truncation; the button sits
+                              outside it, so an ellipsis never swallows it. */}
+                          <div className={styles.copyCell}>
+                            <span className={styles.truncate}>
+                              {entry.company || '—'}
+                            </span>
+                            <CopyButton value={entry.company} label="company" />
+                          </div>
                         </td>
-                        <td
-                          className={`${styles.truncate} ${styles.cellPosition}`}
-                          title={entry.position}
-                        >
-                          {entry.position || '—'}
+                        <td className={styles.cellPosition} title={entry.position}>
+                          <div className={styles.copyCell}>
+                            <span className={styles.truncate}>
+                              {entry.position || '—'}
+                            </span>
+                            <CopyButton value={entry.position} label="position" />
+                          </div>
                         </td>
                         <td className={styles.cellUrl}>
-                          {entry.url ? (
-                            <a
-                              className={`${styles.link} ${styles.urlLink}`}
-                              href={entry.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={entry.url}
-                            >
-                              <span className={styles.truncate}>
-                                {shortUrl(entry.url)}
-                              </span>
-                              <span className={styles.external} aria-hidden="true">
-                                ↗
-                              </span>
-                            </a>
-                          ) : (
-                            <span className={styles.muted}>—</span>
-                          )}
+                          <div className={styles.copyCell}>
+                            {entry.url ? (
+                              <a
+                                className={`${styles.link} ${styles.urlLink}`}
+                                href={entry.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={entry.url}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                <span className={styles.truncate}>
+                                  {shortUrl(entry.url)}
+                                </span>
+                                <span className={styles.external} aria-hidden="true">
+                                  ↗
+                                </span>
+                              </a>
+                            ) : (
+                              <span className={styles.muted}>—</span>
+                            )}
+                            {/* The full URL with its scheme, not the shortened
+                                text in the cell — pasted into a browser, the
+                                shortened one is a search, not a link. */}
+                            <CopyButton value={entry.url} label="applying URL" />
+                          </div>
                         </td>
                         <td
                           className={`${styles.truncate} ${styles.mono} ${styles.cellResume}`}
@@ -373,10 +437,20 @@ export default function RegistryPage() {
                           {entry.resume_name || '—'}
                         </td>
                         <td
-                          className={`${styles.truncate} ${styles.muted} ${styles.cellJob}`}
+                          className={`${styles.muted} ${styles.cellJob}`}
                           title={entry.job_description}
                         >
-                          {entry.job_description || '—'}
+                          <div className={styles.copyCell}>
+                            <span className={styles.truncate}>
+                              {entry.job_description || '—'}
+                            </span>
+                            {/* The whole posting, which is the one value here
+                                nobody could reasonably select by hand. */}
+                            <CopyButton
+                              value={entry.job_description}
+                              label="job description"
+                            />
+                          </div>
                         </td>
                       </tr>,
                       open && (
@@ -415,8 +489,9 @@ export default function RegistryPage() {
             <Pagination pagination={pagination} label="applications" id="registry" />
 
             <p className={styles.footnote}>
-              Click any column heading to sort, or a row’s arrow to see the full job
-              description.
+              Click any column heading to sort, a row to copy the whole
+              application for the tailor page, or a row’s arrow to see the full
+              job description.
             </p>
           </>
         )}

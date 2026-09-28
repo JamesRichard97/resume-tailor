@@ -240,6 +240,144 @@ profile and to leave out anything the posting asks for that the candidate does
 not have, rather than inventing it. `LLM_TEMPERATURE` defaults to 0.3 for the
 same reason.
 
+### The experience section
+
+It is the bulk of the page and the part a screener weighs most, so the prompt
+spends the most rules on it:
+
+* **One bullet per point in the profile.** Read the role's details, count the
+  sentences, and give each one its own bullet — five separate points means five
+  bullets, not three good ones and two thrown away. Never compress two
+  accomplishments into one line.
+* **What was done → how, or with what → what changed → in the posting's words.**
+  There is room for all four at 16–34 words. Under 10 is too thin to keep, over
+  40 stops being read.
+* **Name the technology inside the bullet, not only in the skills list.**
+  "Deployed the service on AWS ECS behind an ALB" both scores with a screener
+  and convinces a human; "AWS" in a list only scores.
+* **The posting's vocabulary reaches the bullets too** — its phrase over the
+  profile's synonym, its word form, an abbreviation's full form at least once,
+  and the family term where the profile proves the instance.
+* **Lead with the match** inside each role; role order stays
+  reverse-chronological, because a shuffled history reads as evasive and a
+  parser expects dates to descend.
+
+`LLM_MAX_TOKENS` defaults to **4000** for the same reason: a resume with a
+bullet per point and technologies named in each runs well past 2000 tokens of
+JSON, and a model that hits the cap is cut off mid-string — which arrives as
+"the model did not return valid JSON" rather than as a token problem. A value in
+`backend/.env` overrides the default either way.
+
+### The skills section
+
+The skills block is the first thing an automated screen reads, and left
+unguided a model treats it as a filtering job — picking a handful of relevant
+entries and dropping the rest. Four rules in `prompts.py` make it a reordering
+job instead:
+
+* **Carry every skill across.** Every entry in the profile's lists appears in
+  the output, however off-topic or dated. Breadth is evidence, and a missing
+  skill is a question you do not want asked. The prompt makes it countable:
+  count them in the profile, count them in the answer, the second number is
+  never smaller.
+* **Then add what the profile proves but the lists omit.** Every technology
+  named in a role or project detail belongs in `skills` even if the candidate
+  never listed it — people routinely forget their own tools, and this is where
+  most of the useful additions come from.
+* **Order for the posting.** Within each group, what the posting asks for comes
+  first, in the posting's spelling: profile "Postgres", posting "PostgreSQL" →
+  write PostgreSQL, because a screener matches strings.
+* **And in the posting's word form.** A suffix loses the point too:
+  *experimentation* does not match *experiments*, *reliability* does not match
+  *reliable*. Whatever inflection the posting uses, the list uses.
+* **Abbreviations both ways.** "Natural Language Processing (NLP)" is two
+  strings to a screener, so every abbreviated skill gets its full form at least
+  once and every spelled-out one gets its short form.
+* **The family, where the profile proves the instance.** PyTorch and transformer
+  fine-tuning *are* deep learning; ingestion jobs *are* data pipelines; a
+  merchant-facing ranking model *is* a recommendation system. When the posting
+  asks for the umbrella term and the profile contains the instance, the umbrella
+  term belongs in the list, in the posting's wording. This is where most of the
+  real matching happens — the candidate usually has the thing and calls it
+  something else.
+* **File each one correctly.** `languages` is programming languages and nothing
+  else — a registration form invites people to type "Machine Learning" there,
+  and a reader who sees that under Languages stops trusting the document.
+  Methods and domains the posting names (NLP, deep learning, CI/CD, RAG, data
+  pipelines) go with the developer tools, where a screener still counts them.
+
+A technology that appears nowhere in the profile stays out, whatever the
+posting asks for.
+
+### Reading the posting on its own terms
+
+Alongside the resume the generation pass returns `wants`: 10–16 lines describing
+the experience the posting asks for, written from the job description alone and
+deliberately without consulting the profile. The instruction is to work through
+the advertisement section by section — every responsibility, every required
+qualification, the skill tags and the preferred block — one line each, in the
+posting's own words and word forms, most important first.
+
+Each line has to be concrete: it names the **hard skills** it involves (the
+technologies, systems and methods, as the posting names them) and the **soft
+skill** the work demands where the posting states one — ownership,
+collaboration, communication, mentoring, judgement. *"Is a strong engineer"* is
+useless; *"Ships LLM-powered products beyond a demo, handling reliability,
+context, tool use, provider changes, latency and cost"* can be checked against a
+career. A line naming no skill at all is rejected by the prompt as too vague.
+The test is whether a reader can check themselves against the list point by
+point without going back to the advertisement.
+
+Lines from the preferred block end in `(preferred)`, which the UI turns into a
+tag and dims the line. Knowing which requirements are firm and which are
+nice-to-have is the first thing you want when deciding whether a gap matters.
+
+**Then it is filtered.** A second field, `wants_met`, holds the 1-based line
+numbers the profile already evidences — judged on substance, so the profile's
+"ingestion jobs" meets a line asking for data pipelines. The panel shows only
+what is left, under *What this posting wants that this profile does not show*,
+with a note counting the hidden lines.
+
+The two-step shape is the point. The model describes the role first, without
+consulting the profile, and matches second. Written the other way round the
+description would quietly shrink to whatever the candidate happens to have,
+which is flattery rather than information. Described in full and then filtered,
+what remains is exactly the list worth acting on. `wants_met` is parsed
+leniently — an answer of `["3", "seven"]` costs one unusable entry rather than
+the whole resume, since nothing downstream depends on it.
+
+It appears above the gap list on the Tailor page under *What this posting is
+looking for*, with a line stating what it is: a description of the role, not of
+this profile. Keeping it uncontaminated by the profile is the point. Softened to
+fit the candidate it would be flattery; written straight it is the thing worth
+reading before deciding whether to apply, and the frame that makes the gap list
+underneath it meaningful.
+
+Like `gaps`, it never enters the resume and the humanizing pass cannot touch it.
+
+### What the posting wanted and the profile lacks
+
+The generation pass returns a `gaps` list alongside the resume: **technical
+skills only** — languages, frameworks, libraries, tools, platforms and technical
+methods — that the posting asks for and the profile shows no evidence of, in the
+posting's own words. Degrees, years of experience, qualities and industry
+preferences are deliberately excluded: `wants` already covers those, and mixing
+them in turns a short to-do list into noise. It is never written into the document —
+a claim with nothing behind it clears a keyword scan and then has to be defended
+in an interview — and the humanizing pass cannot change it, since rewording
+cannot alter what a profile does or does not evidence.
+
+It appears under the generated resume on the Tailor page, as a plain list with a
+one-line explanation. Deliberately inert: no link, no instruction, no call to
+action. It reports what the posting wanted; what to do about each item is a
+judgement only the person whose resume it is can make — some will be work they
+have genuinely done and never registered, and some will be work they have not
+done at all.
+
+The prompt is told to look twice before adding anything to that list, because
+most apparent gaps are vocabulary mismatches: the posting's "data pipelines" is
+often the profile's "ingestion jobs", its "experiments" are "A/B tests".
+
 ### Failure modes
 
 Each one gets its own status code, because each needs a different fix, and the

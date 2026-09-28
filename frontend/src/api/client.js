@@ -103,6 +103,83 @@ export const api = {
     status: () => request('/tailor/status'),
     generate: (body, signal) =>
       request('/tailor', { method: 'POST', body, signal }),
+    /**
+     * The same generation, reporting each phase as the server reaches it.
+     *
+     * `onPhase` is called with every event before the result — {phase, label}
+     * plus whatever that phase carries. Resolves with the finished resume, or
+     * throws an ApiError built from the stream's error event.
+     *
+     * Falls back to the plain endpoint on any transport that cannot stream
+     * (no ReadableStream on the response, an older proxy that buffers it into
+     * one chunk): the resume is what matters, the phases are the nicety.
+     */
+    generateStreaming: async (body, signal, onPhase) => {
+      const res = await fetch(`${BASE_URL}/tailor/stream`, {
+        method: 'POST',
+        signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        // A failure before the stream starts is an ordinary HTTP error.
+        let payload = null
+        const text = await res.text()
+        if (text) {
+          try {
+            payload = JSON.parse(text)
+          } catch {
+            payload = text
+          }
+        }
+        throw new ApiError(extractMessage(payload, res.status), res.status, payload)
+      }
+
+      if (!res.body?.getReader) {
+        return request('/tailor', { method: 'POST', body, signal })
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let result = null
+      let failure = null
+
+      // Events are newline-delimited, and a chunk can split one mid-line, so
+      // the tail is held back until its newline arrives.
+      const handle = (line) => {
+        const trimmed = line.trim()
+        if (!trimmed) return
+        let event
+        try {
+          event = JSON.parse(trimmed)
+        } catch {
+          return // A partial or malformed line is not worth failing over.
+        }
+        if (event.phase === 'done') result = event.result
+        else if (event.phase === 'error') failure = event
+        else onPhase?.(event)
+      }
+
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        lines.forEach(handle)
+      }
+      handle(buffer)
+
+      if (failure) {
+        throw new ApiError(failure.detail, failure.status, { detail: failure.detail })
+      }
+      if (!result) {
+        throw new ApiError('The server closed the connection before finishing.', 502, null)
+      }
+      return result
+    },
     get: (id) => request(`/tailor/${id}`),
     humanize: (id) => request(`/tailor/${id}/humanize`, { method: 'POST' }),
     docx: (id, version = 'auto') =>
@@ -126,5 +203,9 @@ export const api = {
     create: (data) => request('/users', { method: 'POST', body: data }),
     update: (id, data) => request(`/users/${id}`, { method: 'PATCH', body: data }),
     remove: (id) => request(`/users/${id}`, { method: 'DELETE' }),
+    // Clears every sentence added with Insert, leaving the details the user
+    // typed. Returns the updated user, so the caller can refill the form from
+    // the server rather than guessing what is left.
+    clearInserted: (id) => request(`/users/${id}/inserted`, { method: 'DELETE' }),
   },
 }

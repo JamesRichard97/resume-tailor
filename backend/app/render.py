@@ -24,12 +24,22 @@ from .schemas import ResumeDoc
 ACCENT = RGBColor(0x1F, 0x36, 0x64)
 MUTED = RGBColor(0x55, 0x5B, 0x66)
 
-SKILL_LABELS = (
-    ("languages", "Languages"),
-    ("frameworks", "Frameworks"),
-    ("developer_tools", "Developer tools"),
-    ("libraries", "Libraries"),
-)
+
+
+def all_text(resume) -> str:
+    """Every word the finished resume contains.
+
+    Used to check what actually reached the page, so a term counted as
+    "covered" is one a screener reading this document would really find.
+    """
+    parts: list[str] = [resume.headline, resume.summary, *resume.skills]
+    for entry in resume.experience:
+        parts += [entry.position, entry.company, *entry.bullets]
+    for entry in resume.projects:
+        parts += [entry.name, *entry.bullets]
+    for entry in resume.education:
+        parts += [entry.university, entry.details]
+    return "\n".join(p for p in parts if p)
 
 
 # --------------------------------------------------------------------------
@@ -43,9 +53,17 @@ def to_markdown(resume: ResumeDoc) -> str:
     if resume.headline:
         out.append(f"**{resume.headline}**")
 
+    # Location last: it is the one item a reader scans for rather than acts on,
+    # and appending keeps the order of the three contact methods people are
+    # already used to.
     contact = [
         v
-        for v in (resume.contact.email, resume.contact.phone, resume.contact.linkedin)
+        for v in (
+            resume.contact.email,
+            resume.contact.phone,
+            resume.contact.linkedin,
+            resume.contact.location,
+        )
         if v
     ]
     if contact:
@@ -77,12 +95,11 @@ def to_markdown(resume: ResumeDoc) -> str:
             if edu.details:
                 out.append(f"  {edu.details}")
 
-    groups = [(label, getattr(resume.skills, key)) for key, label in SKILL_LABELS]
-    if any(items for _, items in groups):
-        out += ["", "## Technical skills"]
-        for label, items in groups:
-            if items:
-                out.append(f"- **{label}:** {', '.join(items)}")
+    # One line, in the order the model put them: what the posting asks for
+    # first. A screener reads the strings, not the headings that used to group
+    # them, and a single line leaves the ordering to say what matters.
+    if resume.skills:
+        out += ["", "## Technical skills", "", ", ".join(resume.skills)]
 
     return "\n".join(out).strip() + "\n"
 
@@ -191,9 +208,17 @@ def to_docx_bytes(resume: ResumeDoc) -> bytes:
         run.font.color.rgb = MUTED
         _spacing(h, after=2)
 
+    # Location last: it is the one item a reader scans for rather than acts on,
+    # and appending keeps the order of the three contact methods people are
+    # already used to.
     contact = [
         v
-        for v in (resume.contact.email, resume.contact.phone, resume.contact.linkedin)
+        for v in (
+            resume.contact.email,
+            resume.contact.phone,
+            resume.contact.linkedin,
+            resume.contact.location,
+        )
         if v
     ]
     if contact:
@@ -239,19 +264,12 @@ def to_docx_bytes(resume: ResumeDoc) -> bytes:
                     run.font.size = Pt(10)
 
     # --- skills -----------------------------------------------------------
-    groups = [(label, getattr(resume.skills, key)) for key, label in SKILL_LABELS]
-    if any(items for _, items in groups):
+    if resume.skills:
         _heading(doc, "Technical skills")
-        for label, items in groups:
-            if not items:
-                continue
-            p = doc.add_paragraph()
-            _spacing(p, before=1, after=1, line=1.08)
-            lead = p.add_run(f"{label}: ")
-            lead.bold = True
-            lead.font.size = Pt(10)
-            rest = p.add_run(", ".join(items))
-            rest.font.size = Pt(10)
+        p = doc.add_paragraph()
+        _spacing(p, before=1, after=1, line=1.08)
+        run = p.add_run(", ".join(resume.skills))
+        run.font.size = Pt(10)
 
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -262,13 +280,18 @@ def to_docx_bytes(resume: ResumeDoc) -> bytes:
 # Download filename
 # --------------------------------------------------------------------------
 #
-#   Tailored_20260716_JamesRichard_SSENSE_SoftwareEngineer.docx
-#   Humanized_20260716_JamesRichard_SSENSE_SoftwareEngineer.docx
+#   Tailored_20260716_143052_JamesRichard_SSENSE_SoftwareEngineer.docx
+#   Humanized_20260716_150418_JamesRichard_SSENSE_SoftwareEngineer.docx
 #
 # Underscore separates the fields, so no field may contain one — spaces and
 # punctuation are removed and each word is capitalised instead. The result is
 # ASCII-only, which keeps it legal on NTFS, ext4 and APFS alike and lets the
 # Content-Disposition header quote it directly without RFC 5987 escaping.
+#
+# The timestamp carries seconds, so two resumes for the same role never land on
+# the same name and Windows never appends " (1)". Date and time are separated by
+# an underscore like every other field, which sorts correctly as plain text.
+TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S"
 
 # Long enough for a real company or job title, short enough that all five
 # fields together stay well inside the 255-byte filename limit.
@@ -296,20 +319,20 @@ def filename_for(
     """Build the download name for one document.
 
     `kind` is "Tailored" or "Humanized"; `when` is the moment that version was
-    produced, so re-downloading an old resume keeps the date it was generated
-    rather than today's. Empty fields are omitted rather than filled with a
+    produced, so re-downloading an old resume keeps the time it was generated
+    rather than now. Empty fields are omitted rather than filled with a
     placeholder — `..._JamesRichard_SoftwareEngineer.docx` reads better than
     `..._JamesRichard_Company_SoftwareEngineer.docx`.
     """
     moment = when or datetime.now(timezone.utc)
     if moment.tzinfo is not None:
-        # Stored timestamps are UTC; show the server's local date, which is the
-        # date the person actually clicked Generate.
+        # Stored timestamps are UTC; show the server's local clock, which is the
+        # time the person actually clicked Generate.
         moment = moment.astimezone()
 
     parts = [
         _token(kind) or "Resume",
-        moment.strftime("%Y%m%d"),
+        moment.strftime(TIMESTAMP_FORMAT),
         _token(full_name) or "Resume",
         _token(company),
         _token(position),

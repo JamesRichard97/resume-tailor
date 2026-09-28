@@ -1,0 +1,469 @@
+/* The user form, shared by the registration page and the tailor page's
+   Selected card. Only the form's own rules live here — the pages keep their
+   page-level styles. */
+
+/* The dialog owns the height; the body scrolls, the footer stays put. */
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (max-width: 560px) {
+  .modalBody,
+  .modalFooter {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+.row {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.sectionTitle {
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: calc(14px * var(--font-scale));
+  font-weight: 600;
+}
+
+.required {
+  margin-left: 3px;
+  color: var(--danger);
+}
+
+/* The counterpart to the red asterisk. Spelled out rather than marked with a
+   symbol: "Optional" is read correctly by everyone, where the absence of an
+   asterisk is only meaningful to someone comparing it against another field. */
+.optional {
+  margin-left: 6px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  font-size: calc(15px * var(--font-scale));
+  outline: none;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.input:hover {
+  border-color: var(--text-muted);
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.inputError,
+.inputError:hover {
+  border-color: var(--danger);
+}
+
+.inputError:focus {
+  box-shadow: 0 0 0 3px var(--ring-danger);
+}
+
+.hint {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.fieldError {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--danger);
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(14px * var(--font-scale));
+  white-space: pre-line;
+}
+
+.primary,
+.secondary {
+  padding: 9px 16px;
+  border-radius: var(--radius);
+  font-size: calc(15px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease), border-color 0.15s var(--ease),
+    transform 0.08s var(--ease);
+}
+
+.primary:active:not(:disabled),
+.secondary:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.secondary {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* -- skills a posting asked for and this profile does not list ------------ */
+/* At the top of the form and visually apart from it: this is a proposal from
+   a job description, not part of the record until someone says so. */
+.suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.suggestTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.suggestCount {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.suggestLede {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.5;
+}
+
+/* Wraps into as many rows as it needs — a posting can name a dozen or more,
+   and a tall single column would push the rest of the form off the screen. */
+.suggestList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: calc(14px * var(--font-scale));
+  cursor: pointer;
+}
+
+.suggestItem input {
+  cursor: pointer;
+}
+
+.suggestFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.suggestGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.suggestSelect {
+  padding: 5px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* The role selector and Insert all, on one line. Wraps rather than shrinking
+   so a long role name does not squeeze the button down to an ellipsis. */
+.suggestControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.suggestInsertAll {
+  flex: none;
+  margin-left: auto;
+  padding: 5px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.suggestInsertAll:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.suggestInsertAll:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* Stays in place once everything is in, rather than disappearing: a control
+   that vanishes on its last use leaves you wondering whether you clicked it. */
+.suggestInsertAll:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.suggestPicked {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+/* -- save progress -------------------------------------------------------- */
+/* In the footer beside the buttons, so it appears where the action was taken. */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  margin-right: auto;
+}
+
+.progressLabel {
+  font-size: calc(12.5px * var(--font-scale));
+  color: var(--text-muted);
+}
+
+.progressTrack {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.progressFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.25s var(--ease);
+}
+
+/* -- experience the posting asks for -------------------------------------- */
+/* Offered, not applied. Each line goes into a role's details on request, so it
+   can be rewritten there before anything is saved. */
+.suggestEmpty {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+}
+
+.wantOffers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wantOffer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: calc(13.5px * var(--font-scale));
+  line-height: 1.5;
+}
+
+.wantOfferDone {
+  color: var(--text-muted);
+}
+
+.wantInsert {
+  flex: none;
+  padding: 3px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(12.5px * var(--font-scale));
+  font-weight: 500;
+}
+
+.wantInsert:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.wantInsert:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------------------------------
+   The Format inserted experiences bar. Sits above the roles, states how many
+   sentences are held, and asks before removing them — the clear is permanent
+   and reaches rows the user may not have scrolled to.
+   --------------------------------------------------------------------------- */
+.formatBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.formatLede,
+.formatWarn {
+  flex: 1 1 260px;
+  font-size: calc(12px * var(--font-scale));
+  line-height: 18px;
+  color: var(--text-muted);
+}
+
+.formatWarn {
+  color: var(--text);
+}
+
+.formatButton,
+.formatConfirm,
+.formatCancel {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.formatButton:hover,
+.formatCancel:hover {
+  border-color: var(--text-muted);
+}
+
+/* The destructive one is the only one coloured, so the two choices in the
+   confirm step cannot be mistaken for each other at a glance. */
+.formatConfirm {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.formatConfirm:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.formatButton:focus-visible,
+.formatConfirm:focus-visible,
+.formatCancel:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.formatButton:disabled,
+.formatConfirm:disabled,
+.formatCancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

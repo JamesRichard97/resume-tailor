@@ -73,22 +73,29 @@ export function parseSkillList(value) {
   return out
 }
 
-export const formatSkillList = (list) => (list ?? []).join(', ')
+export const formatSkillList = (list) => toSkillList(list).join(', ')
 
-export const SKILL_GROUPS = [
-  { key: 'languages', label: 'Languages', placeholder: 'Python, TypeScript, Go' },
-  { key: 'frameworks', label: 'Frameworks', placeholder: 'FastAPI, React, Django' },
-  {
-    key: 'developer_tools',
-    label: 'Developer tools',
-    placeholder: 'Docker, Git, Postman',
-  },
-  { key: 'libraries', label: 'Libraries', placeholder: 'pandas, pydantic, NumPy' },
-]
-
-export const EMPTY_SKILLS = {
-  languages: '',
-  frameworks: '',
-  developer_tools: '',
-  libraries: '',
+/** Skills are one flat list. A row stored when they were four named groups
+ *  still arrives as an object, so reading them goes through here — the app
+ *  never has to know which shape the server happened to send. */
+export const toSkillList = (skills) => {
+  if (Array.isArray(skills)) return skills
+  if (skills && typeof skills === 'object') {
+    // The order the groups used to be shown in, so a merged list reads the
+    // way its owner last saw it.
+    return ['languages', 'frameworks', 'developer_tools', 'libraries']
+      .flatMap((key) => skills[key] ?? [])
+      .concat(
+        Object.entries(skills)
+          .filter(
+            ([key]) =>
+              !['languages', 'frameworks', 'developer_tools', 'libraries'].includes(key),
+          )
+          .flatMap(([, items]) => (Array.isArray(items) ? items : [])),
+      )
+  }
+  return []
 }
+
+export const SKILLS_PLACEHOLDER =
+  'Python, FastAPI, Docker, PostgreSQL, CI/CD, machine learning'

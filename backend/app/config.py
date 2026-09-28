@@ -87,14 +87,43 @@ class Settings:
     llm_model: str = field(
         default_factory=lambda: os.getenv("LLM_MODEL", "gpt-4o").strip()
     )
+    # Seconds for a whole generation, not one call. A request still running
+    # after this is usually a model that has stalled rather than one about to
+    # answer, and the UI says "the model timed out" instead of holding the page.
+    #
+    # 60 is sized for the one-call default: a detailed resume is a few thousand
+    # output tokens, and output is written serially at roughly 30-80 tokens a
+    # second, so 40 was cutting off generations that were still making progress.
+    # Raise LLM_TIMEOUT in backend/.env if your endpoint is slow but healthy —
+    # a large local model on CPU can legitimately need minutes for a full
+    # resume, and LLM_REFINE=on needs room for up to three calls.
     llm_timeout: float = field(
-        default_factory=lambda: float(os.getenv("LLM_TIMEOUT", "120"))
+        default_factory=lambda: float(os.getenv("LLM_TIMEOUT", "60"))
     )
     llm_temperature: float = field(
         default_factory=lambda: float(os.getenv("LLM_TEMPERATURE", "0.3"))
     )
+    # One generation returns the whole resume AND the reading of the posting:
+    # several roles with a bullet per point in the profile, the four term
+    # lists, 10-16 `wants` lines and 8-16 sample sentences. Measured against
+    # the current schema, a typical profile lands near 3,300 tokens and a
+    # detailed one — five roles, a dozen bullets each — passes 4,800, so 4000
+    # was cutting real answers in half. A model that hits the cap stops
+    # mid-string, and what arrives here is invalid JSON.
+    #
+    # Raising it costs nothing on a request that does not need the room: the
+    # limit is a ceiling, not an amount to produce. It does raise the ceiling
+    # on how long one can take, which LLM_TIMEOUT then bounds.
+    # The two follow-up calls — the coverage pass and the match pass — each cost
+    # a whole round trip, and a round trip here is tens of seconds because the
+    # answer is produced one token at a time. Off by default: one generation is
+    # one call. Turn it on when a complete reading matters more than the wait.
+    llm_refine: bool = field(
+        default_factory=lambda: os.getenv("LLM_REFINE", "off").strip().lower()
+        in ("1", "on", "true", "yes")
+    )
     llm_max_tokens: int = field(
-        default_factory=lambda: int(os.getenv("LLM_MAX_TOKENS", "2000"))
+        default_factory=lambda: int(os.getenv("LLM_MAX_TOKENS", "8000"))
     )
     # "auto" sends response_format=json_object and silently retries without it
     # if the server rejects the parameter. "on" requires it, "off" never sends
@@ -123,11 +152,19 @@ class Settings:
     claude_version: str = field(
         default_factory=lambda: os.getenv("CLAUDE_VERSION", "2023-06-01").strip()
     )
+    # The humanizing pass rewrites a resume that already exists, so a stall
+    # here costs the rewrite and not the generation. Same budget as the
+    # generation call above, for one less number to reason about.
     claude_timeout: float = field(
-        default_factory=lambda: float(os.getenv("CLAUDE_TIMEOUT", "120"))
+        default_factory=lambda: float(os.getenv("CLAUDE_TIMEOUT", "60"))
     )
+    # Matches llm_max_tokens above, and has to: the humanizing pass is handed a
+    # finished resume and asked to return the whole thing rewritten, so its
+    # answer is at least as long as the one that came out of generation. A
+    # smaller ceiling here would cut the rewrite off partway and throw away a
+    # resume that generated cleanly.
     claude_max_tokens: int = field(
-        default_factory=lambda: int(os.getenv("CLAUDE_MAX_TOKENS", "4000"))
+        default_factory=lambda: int(os.getenv("CLAUDE_MAX_TOKENS", "8000"))
     )
     claude_temperature: float = field(
         default_factory=lambda: float(os.getenv("CLAUDE_TEMPERATURE", "0.8"))

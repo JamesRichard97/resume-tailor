@@ -43,6 +43,27 @@
   min-width: 0;
 }
 
+/* Two panes of equal height, each scrolling its own content, rather than one
+   long page that scrolls on whichever column happens to be taller. The height
+   itself is set inline by HomePage.jsx (the rest of the window below the
+   heading); this class is only added when there is one, so on a narrow screen
+   — where the columns stack — the page scrolls normally instead. */
+.columnsFixed {
+  align-items: stretch;
+  min-height: 0;
+}
+
+.columnsFixed .column {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Keeps the scrollbar off the cards' rounded edge, and reserved on both
+     sides so a column does not shift sideways when its content grows past
+     the fold. */
+  padding-right: 8px;
+  scrollbar-gutter: stable;
+}
+
 /* One column once two would leave each too narrow to be worth the split. */
 @media (max-width: 1060px) {
   .columns {
@@ -98,6 +119,20 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
+}
+
+/* Title on the left, the card's own action on the right. The title carries
+   .cardTitle's bottom margin, so it is dropped there and the row keeps it. */
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.cardHeadTitle {
+  margin-bottom: 0;
 }
 
 .label {
@@ -437,4 +472,151 @@
   line-height: 1.7;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* -- what the posting wanted and the profile lacks ------------------------ */
+/* A note, not a warning: nothing went wrong here, and the colours should not
+   suggest otherwise. */
+.gaps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+.gapsTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: calc(13px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.gapsCount {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  letter-spacing: 0;
+}
+
+.gapList {
+  margin: 0;
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.6;
+  /* Selectable as one unit, so the whole list can be copied in a single drag. */
+  user-select: all;
+}
+
+.gapsNote {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+}
+
+/* Matches the profile earned that the resume dropped. Bordered rather than
+   dashed like the posting panels: this one is about the document above it, and
+   it is the only one of the four that says something went wrong. */
+.missed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--danger-soft);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius);
+}
+
+/* -- the posting in its own words ----------------------------------------- */
+/* Same shell as the two panels below it, so the three read as one set. */
+.terms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* Bullets are written into the markup so they survive a copy, as in the wants
+   list; the browser's own marker is turned off and the hanging indent keeps
+   wrapped lines under the text. */
+.sampleList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.55;
+}
+
+.sampleList > li {
+  padding-left: 1.1em;
+  text-indent: -1.1em;
+}
+
+/* The coverage check's finding. Stated, not alarmed: the sentences missing a
+   term is a shortfall worth seeing, not an error in the resume. */
+.uncovered {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.5;
+  /* Selectable in one go, so the missing terms copy in a single click. */
+  user-select: all;
+}
+
+/* -- what the posting itself asks for ------------------------------------- */
+/* Same shell as the gap note below it, so the two read as a pair. */
+.wants {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--bg-tint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+/* The bullets are written into the markup, so the browser's own list marker
+   is turned off here — otherwise every line would carry two. Each line keeps
+   a hanging indent: the bullet sits in the margin and wrapped lines align
+   under the text, exactly as a marker would place them. */
+.wantList {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  color: var(--text);
+  font-size: calc(14px * var(--font-scale));
+  line-height: 1.55;
+}
+
+.wantList > li {
+  padding-left: 1.1em;
+  text-indent: -1.1em;
 }

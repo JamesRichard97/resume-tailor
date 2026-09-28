@@ -208,3 +208,115 @@
   text-transform: none;
   color: var(--text-subtle);
 }
+
+/* Available to a screen reader, out of the visual flow. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Inserted sentences — suggestions taken from a posting, held beside a role's
+   Details rather than inside it. Styled as a distinct, quieter block so the
+   difference between "what I wrote" and "what I accepted" is visible at a
+   glance; that distinction is the reason they are stored separately at all.
+   --------------------------------------------------------------------------- */
+.inserted {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+}
+
+.insertedHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: calc(11px * var(--font-scale));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.insertedCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--surface-raised, var(--surface));
+  border: 1px solid var(--border);
+  font-size: calc(10px * var(--font-scale));
+  letter-spacing: 0;
+}
+
+.insertedList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.insertedItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: calc(13px * var(--font-scale));
+  line-height: 20px;
+  color: var(--text);
+}
+
+/* The marker is drawn here rather than by list-style so the text still
+   selects and copies cleanly, the same reason the panels elsewhere do it. */
+.insertedItem::before {
+  content: '\2022';
+  flex: none;
+  color: var(--text-subtle);
+}
+
+.insertedRemove {
+  flex: none;
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.insertedRemove:hover {
+  border-color: var(--border);
+  color: var(--danger);
+}
+
+.insertedRemove:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.insertedNote {
+  margin: 8px 0 0;
+  font-size: calc(11px * var(--font-scale));
+  line-height: 16px;
+  color: var(--text-subtle);
+}

@@ -3,7 +3,7 @@ import { newEntry, validateDateRange } from '../lib/entries.js'
 import styles from './EntryFields.module.css'
 
 export const newExperience = () =>
-  newEntry({ position: '', company: '', details: '' })
+  newEntry({ position: '', company: '', details: '', inserted: [] })
 
 /** Mirrors the server's per-entry rules. Returns {index: {field: message}}. */
 export function validateExperiences(rows) {
@@ -36,6 +36,7 @@ export default function ExperienceFields({
   onChange,
   onAdd,
   onRemove,
+  onRemoveInserted,
   disabled = false,
 }) {
   return (
@@ -134,6 +135,39 @@ export default function ExperienceFields({
                 <span className={styles.fieldError}>{rowErrors.details}</span>
               )}
             </div>
+
+            {/* Below the details and visibly separate from them, because that
+                separation is the whole point: these came from a posting, the
+                box above is what this person wrote. Shown only when the role
+                has some, so a profile that never used Insert looks unchanged. */}
+            {(row.inserted?.length ?? 0) > 0 && (
+              <div className={styles.inserted}>
+                <p className={styles.insertedHead}>
+                  Inserted from a posting
+                  <span className={styles.insertedCount}>{row.inserted.length}</span>
+                </p>
+                <ul className={styles.insertedList}>
+                  {row.inserted.map((sentence, sentenceIndex) => (
+                    <li key={`${sentence}-${sentenceIndex}`} className={styles.insertedItem}>
+                      <span>{sentence}</span>
+                      <button
+                        type="button"
+                        className={styles.insertedRemove}
+                        onClick={() => onRemoveInserted?.(index, sentenceIndex)}
+                        aria-label={`Remove inserted sentence ${sentenceIndex + 1}`}
+                        title="Remove this sentence"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <p className={styles.insertedNote}>
+                  Kept separate from Details. The resume draws on these, and
+                  Format inserted experiences clears them all.
+                </p>
+              </div>
+            )}
           </fieldset>
         )
       })}

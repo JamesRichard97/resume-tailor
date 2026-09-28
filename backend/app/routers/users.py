@@ -30,12 +30,12 @@ def _now() -> str:
 def _present(user: dict) -> dict:
     """Stored row -> response shape, with the counts the list view shows."""
     out = {**user}
-    skills = user.get("skills") or {}
+    skills = user.get("skills") or []
 
     out["experience_count"] = len(out.get("experiences") or [])
     out["education_count"] = len(out.get("education") or [])
     out["project_count"] = len(out.get("projects") or [])
-    out["skill_count"] = sum(len(skills.get(g) or []) for g in db.SKILL_GROUPS)
+    out["skill_count"] = len(skills or [])
     out["is_complete"] = db.is_complete(user)
     return out
 
@@ -123,6 +123,25 @@ def update_user(user_id: str, payload: UserUpdate) -> dict:
     except sqlite3.IntegrityError as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, detail=EMAIL_TAKEN) from exc
     return _present(user)
+
+
+@router.delete(
+    "/{user_id}/inserted",
+    response_model=User,
+    summary="Remove every inserted sentence, keeping the typed details",
+)
+def clear_inserted(user_id: str) -> dict:
+    """What the "Format inserted experiences" button calls.
+
+    Its own endpoint rather than a PATCH carrying empty lists: a PATCH would
+    rewrite the experiences too, so a stale form open in another tab could put
+    back details the user had since changed. This touches one table and cannot
+    reach `details` at all, which is the guarantee the button is making.
+    """
+    if db.get_user(user_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="User not found")
+    db.clear_inserted(user_id)
+    return _present(db.get_user(user_id))
 
 
 @router.delete("/{user_id}", response_model=Message, summary="Delete a user")

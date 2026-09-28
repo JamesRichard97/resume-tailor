@@ -95,13 +95,16 @@ def _import_users(conn, rows: list[dict]) -> int:
 
         conn.execute(
             "INSERT INTO users (id, full_name, linkedin_url, email, phone,"
-            " created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            " location, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 row["id"],
                 row.get("full_name") or "",
                 row.get("linkedin_url"),
                 email,
                 row.get("phone"),
+                # Absent from a file exported before the field existed, which
+                # reads as None — the same as a profile that has no city.
+                row.get("location"),
                 row.get("created_at"),
                 row.get("updated_at"),
             ),

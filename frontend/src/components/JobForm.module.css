@@ -98,8 +98,57 @@
 
 .actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 14px;
   padding-top: 2px;
+}
+
+/* -- how long this generation has been running ---------------------------- */
+/* Beside the button, because that is where the wait was started. Only shown
+   while a request is in flight. */
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  min-width: 140px;
+}
+
+.timerText {
+  font-size: calc(13px * var(--font-scale));
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.timerCount {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.timerLimit {
+  font-variant-numeric: tabular-nums;
+}
+
+.timerTrack {
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.timerFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  /* Matches the tick, so the bar advances steadily rather than in jumps. */
+  transition: width 0.25s linear;
+}
+
+.timerOver {
+  background: var(--danger);
 }
 
 .primary {
@@ -142,4 +191,125 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* -- filling the form from the clipboard ---------------------------------- */
+/* Above the fields, because it is what you do before typing any of them. */
+.pasteRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.paste {
+  flex: none;
+  padding: 6px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: calc(13.5px * var(--font-scale));
+  font-weight: 500;
+  transition: background-color 0.15s var(--ease);
+}
+
+.paste:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.paste:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pasteHint {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: calc(13px * var(--font-scale));
+}
+
+.pasteError {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: calc(13px * var(--font-scale));
+  line-height: 1.5;
+}
+
+/* -- what the last generation cost --------------------------------------- */
+/* Beside the button, in the same place the timer occupies while a request is
+   running: one slot that answers "how long did that take" during the wait and
+   "what did it cost" afterwards. Right-aligned so the two numbers sit against
+   the button rather than drifting into the middle of the row. */
+.usage {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  margin-right: auto;
+  font-size: calc(12px * var(--font-scale));
+  line-height: 16px;
+  color: var(--text-muted);
+  text-align: right;
+  cursor: default;
+}
+
+.usageLine {
+  white-space: nowrap;
+}
+
+.usageTotal {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.usageSplit {
+  font-size: calc(11px * var(--font-scale));
+  font-variant-numeric: tabular-nums;
+  color: var(--text-subtle);
+}
+
+/* -- which step the server is on ------------------------------------------ */
+/* Above the clock in the same block. The clock says how long this has been
+   going; this says what it is doing, which is the part that makes a long wait
+   tolerable rather than suspicious. */
+.phase {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  line-height: 16px;
+  color: var(--text);
+}
+
+/* Pulses, so a phase that sits still for a while still reads as alive. */
+.phaseDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: phasePulse 1.4s var(--ease) infinite;
+}
+
+@keyframes phasePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.8); }
+}
+
+/* Motion is decoration here — the words carry the meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .phaseDot {
+    animation: none;
+  }
+}
+
+.phaseDetail {
+  font-weight: 400;
+  color: var(--text-muted);
 }

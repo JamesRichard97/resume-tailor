@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass
 
 import httpx
@@ -29,6 +30,17 @@ class Completion:
 
     text: str
     model: str
+    # What the provider says the call cost, from the `usage` block it returns.
+    # Reported rather than counted locally: the only number that matters is the
+    # one the provider billed, and a local tokenizer is a guess at another
+    # vendor's tokenizer that drifts every time they change it. Zero means the
+    # provider sent no usage block — some OpenAI-compatible servers do not.
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.completion_tokens
 
 
 class LLMError(RuntimeError):
@@ -56,8 +68,13 @@ def _snippet(text: str, limit: int = 280) -> str:
     return text[:limit] + ("…" if len(text) > limit else "")
 
 
+# Below this there is no point starting a call: the connection alone can take
+# most of it, and a request that cannot finish is worse than one not made.
+MIN_BUDGET = 3.0
+
+
 async def chat(
-    messages: list[dict[str, str]], *, json_mode: bool = False
+    messages: list[dict[str, str]], *, json_mode: bool = False, budget: float | None = None
 ) -> Completion:
     """Send a chat completion.
 
@@ -65,6 +82,11 @@ async def chat(
     OpenAI-compatible server supports `response_format`, so a 400 that mentions
     it is retried once without — the prompt asks for JSON regardless, so the
     parameter is a belt, not the braces.
+
+    `budget` is the seconds this call may take IN TOTAL, retry included. The
+    caller passes what is left of the request's deadline, so a generation that
+    makes several calls still finishes inside one timeout rather than one
+    timeout per call. Omitted, it falls back to the configured timeout.
     """
     if not settings.llm_configured:
         raise LLMNotConfigured(
@@ -89,8 +111,19 @@ async def chat(
     if want_json:
         payload["response_format"] = {"type": "json_object"}
 
+    limit = settings.llm_timeout if budget is None else max(budget, 0.0)
+    if limit < MIN_BUDGET:
+        raise LLMTimeout(
+            f"No time left for the model to answer in "
+            f"({settings.llm_timeout:.0f}s budget spent)."
+        )
+
+    started = time.monotonic()
     try:
-        async with httpx.AsyncClient(timeout=settings.llm_timeout) as client:
+        # Every phase gets the same ceiling, so a server that accepts the
+        # connection and then says nothing is cut off as surely as one that
+        # never answers at all.
+        async with httpx.AsyncClient(timeout=httpx.Timeout(limit)) as client:
             response = await client.post(url, json=payload, headers=headers)
             # Some servers reject response_format outright; drop it and retry.
             if (
@@ -100,11 +133,25 @@ async def chat(
                 and "response_format" in response.text
             ):
                 payload.pop("response_format", None)
-                response = await client.post(url, json=payload, headers=headers)
-    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
+                # The retry shares the budget rather than getting a fresh one —
+                # otherwise a server that rejects the parameter costs twice the
+                # timeout the operator asked for.
+                left = limit - (time.monotonic() - started)
+                if left < MIN_BUDGET:
+                    raise LLMTimeout(
+                        f"The model at {settings.llm_base_url} did not respond "
+                        f"within {limit:.0f}s."
+                    )
+                response = await client.post(
+                    url, json=payload, headers=headers, timeout=httpx.Timeout(left)
+                )
+    # Every timeout httpx raises, not the three that were listed here: a pool
+    # timeout was being reported as "could not reach the server", which sends
+    # whoever reads it looking in the wrong place.
+    except httpx.TimeoutException as exc:
         raise LLMTimeout(
             f"The model at {settings.llm_base_url} did not respond within "
-            f"{settings.llm_timeout:.0f}s."
+            f"{limit:.0f}s."
         ) from exc
     except httpx.RequestError as exc:
         raise LLMUnavailable(
@@ -142,10 +189,45 @@ async def chat(
     if not content or not content.strip():
         raise LLMBadResponse("The model returned an empty response.")
 
+    # A cut-off answer is not malformed JSON, it is an answer that ran out of
+    # room, and saying so points at the setting that fixes it. Without this the
+    # failure surfaces as "the model returned malformed JSON", which sends
+    # whoever reads it looking at the prompt instead of at LLM_MAX_TOKENS.
+    if (data["choices"][0] or {}).get("finish_reason") == "length":
+        raise LLMBadResponse(
+            f"The model hit its {settings.llm_max_tokens}-token output limit and "
+            "the answer was cut off mid-JSON. Raise LLM_MAX_TOKENS in "
+            "backend/.env and restart the server."
+        )
+
+    prompt_tokens, completion_tokens = _usage(
+        data.get("usage"), "prompt_tokens", "completion_tokens"
+    )
     return Completion(
         text=content.strip(),
         model=data.get("model") or settings.llm_model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
     )
+
+
+def _usage(block, prompt_key: str, completion_key: str) -> tuple[int, int]:
+    """Pull the two counts out of a provider's usage block.
+
+    Tolerant on purpose: not every OpenAI-compatible server sends one, and a
+    missing or malformed block must cost a number on screen, never the resume
+    the user waited for.
+    """
+    if not isinstance(block, dict):
+        return 0, 0
+
+    def count(key: str) -> int:
+        try:
+            return max(0, int(block.get(key) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    return count(prompt_key), count(completion_key)
 
 
 _FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.IGNORECASE)
@@ -218,9 +300,11 @@ async def claude(system: str, user_content: str) -> Completion:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=settings.claude_timeout) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(settings.claude_timeout)
+        ) as client:
             response = await client.post(url, json=payload, headers=headers)
-    except (httpx.ConnectTimeout, httpx.ReadTimeout, httpx.WriteTimeout) as exc:
+    except httpx.TimeoutException as exc:
         raise LLMTimeout(
             f"Claude at {settings.claude_base_url} did not respond within "
             f"{settings.claude_timeout:.0f}s."
@@ -263,7 +347,25 @@ async def claude(system: str, user_content: str) -> Completion:
     if not text.strip():
         raise LLMBadResponse("Claude returned an empty response.")
 
+    # The same guard the generation call above has, for the same reason. Claude
+    # says "max_tokens" where OpenAI says "length", but a cut-off rewrite fails
+    # identically: it is not malformed JSON, it is an answer that ran out of
+    # room, and naming the setting saves whoever reads the error from going
+    # through the prompt looking for the fault.
+    if data.get("stop_reason") == "max_tokens":
+        raise LLMBadResponse(
+            f"Claude hit its {settings.claude_max_tokens}-token output limit and "
+            "the rewrite was cut off. Raise CLAUDE_MAX_TOKENS in backend/.env "
+            "and restart the server."
+        )
+
+    # Claude names them differently: input_tokens / output_tokens.
+    prompt_tokens, completion_tokens = _usage(
+        data.get("usage"), "input_tokens", "output_tokens"
+    )
     return Completion(
         text=text.strip(),
         model=data.get("model") or settings.claude_model,
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
     )

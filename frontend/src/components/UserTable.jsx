@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Pagination from './Pagination.jsx'
 import { usePagination } from '../hooks/usePagination.js'
 import styles from './UserTable.module.css'
+import { toSkillList } from '../lib/entries.js'
 
 /**
  * Registered users with row-level edit / delete.
@@ -20,14 +21,9 @@ import styles from './UserTable.module.css'
  *   onDelete(id)
  *   onAdd()      empty-state call to action
  */
-const SKILL_KEYS = ['languages', 'frameworks', 'developer_tools', 'libraries']
-
 /** "2 roles · 1 edu · 3 proj · 9 skills", skipping whatever is empty. */
 function summarize(user) {
-  const skills = SKILL_KEYS.reduce(
-    (sum, key) => sum + (user.skills?.[key]?.length ?? 0),
-    0,
-  )
+  const skills = toSkillList(user.skills).length
   const parts = [
     [user.experiences?.length, 'role', 'roles'],
     [user.education?.length, 'edu', 'edu'],
@@ -132,6 +128,18 @@ export default function UserTable({
                     >
                       {user.email ?? '—'}
                     </span>
+                    {/* Third line in the same cell rather than a sixth column:
+                        the table is already wide, and a short value stacked
+                        here costs no width. Rendered only when set, so rows
+                        for profiles without one keep their current height. */}
+                    {user.location && (
+                      <span
+                        className={`${styles.sub} ${styles.truncate}`}
+                        title={user.location}
+                      >
+                        {user.location}
+                      </span>
+                    )}
                   </div>
                 </td>
                 <td

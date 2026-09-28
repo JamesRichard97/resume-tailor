@@ -2,16 +2,26 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
-from .. import db, humanize, llm, registry, render
+from .. import db, humanize, llm, registry, render, terms
 from ..config import settings
-from ..prompts import build_humanize_messages, build_messages
+from ..prompts import (
+    build_coverage_messages,
+    build_humanize_messages,
+    build_match_messages,
+    build_messages,
+    format_profile,
+)
 from ..schemas import (
     ResumeDoc,
     TailorRequest,
@@ -48,6 +58,7 @@ def tailor_status() -> dict:
         "configured": settings.llm_configured,
         "base_url": settings.llm_base_url or None,
         "model": settings.llm_model if settings.llm_configured else None,
+        "timeout": settings.llm_timeout,
         "detail": (
             None
             if settings.llm_configured
@@ -60,6 +71,7 @@ def tailor_status() -> dict:
             "configured": settings.claude_configured,
             "base_url": settings.claude_base_url or None,
             "model": settings.claude_model or None,
+            "timeout": settings.claude_timeout,
             "detail": (
                 None
                 if settings.claude_configured
@@ -73,41 +85,151 @@ def tailor_status() -> dict:
     }
 
 
+# The phases a generation moves through, in order, with the words the UI shows.
+# Kept here rather than in the frontend so what is displayed cannot drift from
+# what the server actually does — a label naming a step the code no longer runs
+# is worse than no label at all.
+PHASES = {
+    "profile": "Reading the profile",
+    "prompt": "Building the prompt",
+    "model": "The model is writing",
+    "checking": "Checking what came back",
+    "coverage": "Covering terms it missed",
+    "matching": "Adding evidence from the profile",
+    "saving": "Saving",
+    "done": "Done",
+    "error": "Failed",
+}
+
+
 @router.post("", response_model=TailorResponse, summary="Generate a tailored resume")
 async def tailor(payload: TailorRequest) -> dict:
+    """The plain endpoint: same work, but nothing is reported until it ends."""
+    async for event in _generate(payload):
+        if event["phase"] == "done":
+            return event["result"]
+        if event["phase"] == "error":
+            raise HTTPException(event["status"], detail=event["detail"])
+    raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail="Generation produced no result.")
+
+
+@router.post("/stream", summary="Generate, reporting each phase as it happens")
+async def tailor_stream(payload: TailorRequest) -> StreamingResponse:
+    """The same generation, as a stream of newline-delimited JSON events.
+
+    NDJSON over a POST rather than server-sent events: SSE is GET-only and the
+    posting can be thousands of words, which does not belong in a URL. The
+    client reads the body as it arrives and shows the latest phase.
+
+    An error arrives as a final event rather than an HTTP status, because by
+    then the 200 and its headers have already gone. The status the plain
+    endpoint would have returned is carried in the event so the client can
+    treat it the same way.
+    """
+
+    async def body():
+        async for event in _generate(payload):
+            yield json.dumps(event, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        body(),
+        media_type="application/x-ndjson",
+        headers={
+            # Without this an nginx in front of the app buffers the whole
+            # response and every phase arrives at once, at the end, which
+            # defeats the point of streaming them.
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
+async def _generate(payload: TailorRequest):
+    """Runs one generation, yielding a phase event before each stage.
+
+    One implementation behind both endpoints: if the phases lived only in the
+    streaming path they would be free to describe something the plain path does
+    not do, and the two would drift apart.
+    """
+    yield _phase("profile")
+
     user = db.get_user(payload.user_id)
     if user is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="User not found")
+        yield _error(status.HTTP_404_NOT_FOUND, "User not found")
+        return
 
     job = payload.job.model_dump(mode="json")
 
+    # ONE deadline for the whole request, not one per call. Generating a resume
+    # can take three calls — the resume, the coverage pass, the recovery pass —
+    # and giving each the configured timeout meant a 40s setting could hold the
+    # browser for two minutes. LLM_TIMEOUT is what this endpoint may take, full
+    # stop; the passes after the first get whatever is left of it and are
+    # skipped when that is too little to be worth starting.
+    deadline = time.monotonic() + settings.llm_timeout
+    tally = _Tally()
+
+    yield _phase("prompt")
+    messages = build_messages(user, job)
+
+    yield _phase("model", call=1)
     try:
-        completion = await llm.chat(build_messages(user, job), json_mode=True)
+        completion = await llm.chat(
+            messages,
+            json_mode=True,
+            budget=_left(deadline),
+        )
+        tally.add(completion)
+        yield _phase("checking")
         data = llm.extract_json(
             completion.text,
             hint="If your server supports it, set LLM_JSON_MODE=on.",
         )
     except llm.LLMError as exc:
-        raise HTTPException(
-            ERROR_STATUS.get(type(exc), status.HTTP_502_BAD_GATEWAY),
-            detail=str(exc),
-        ) from exc
+        yield _error(
+            ERROR_STATUS.get(type(exc), status.HTTP_502_BAD_GATEWAY), str(exc)
+        )
+        return
 
     # The model chose these values; the schema is what makes them safe to build
     # a document from. A bad shape is the model's fault, not the caller's, so it
     # surfaces as 502 like any other upstream problem.
     data.setdefault("full_name", user.get("full_name") or "")
+    _fill_contact(data, user)
     try:
         resume = ResumeDoc.model_validate(data)
     except ValidationError as exc:
         first = exc.errors()[0]
         where = ".".join(str(x) for x in first["loc"]) or "response"
-        message = (
+        yield _error(
+            status.HTTP_502_BAD_GATEWAY,
             "The model returned a resume in the wrong shape "
-            f"({where}: {first['msg']}). Try again, or use a stronger model."
+            f"({where}: {first['msg']}). Try again, or use a stronger model.",
         )
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, detail=message) from exc
+        return
 
+    # The refine passes each decide for themselves whether to run — refine off,
+    # no time left, nothing missing — so the phase is announced from in there,
+    # where the decision is, rather than guessed at from out here.
+    async for event, value in _with_phases(
+        _cover_missing_terms(resume, deadline, tally)
+    ):
+        if event is not None:
+            yield event
+        else:
+            resume = value
+
+    async for event, value in _with_phases(
+        _close_missed_matches(resume, user, deadline, tally)
+    ):
+        if event is not None:
+            yield event
+        else:
+            resume = value
+
+    resume = _mark_profile_terms(resume, user)
+
+    yield _phase("saving")
     record = {
         "id": str(uuid.uuid4()),
         "user_id": user["id"],
@@ -119,6 +241,7 @@ async def tailor(payload: TailorRequest) -> dict:
         # this resume was written against.
         "description": job.get("description"),
         "model": completion.model,
+        "usage": tally.as_dict(),
         "resume": resume.model_dump(mode="json"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -127,7 +250,347 @@ async def tailor(payload: TailorRequest) -> dict:
     # generation — and so a refresh doesn't lose the result.
     db.save_resume(record)
 
-    return _present(record)
+    yield {"phase": "done", "label": PHASES["done"], "result": _present(record)}
+
+
+def _fill_contact(data: dict, user: dict) -> None:
+    """Fill any contact field the model left out, from the profile.
+
+    The contact block is the one part of a resume that is pure transcription:
+    the profile already holds the authoritative email, phone, LinkedIn and
+    city, and the model is only being asked to copy them across. Trusting it to
+    do that every time is a bet with no upside — when it forgets, the resume
+    goes out with no way to reach the candidate on it, which is worse than any
+    wording problem the model could have instead.
+
+    Only fills what is missing. A value the model did supply is left alone,
+    because it may have reformatted it deliberately, and nothing here can
+    invent a detail the profile does not already contain.
+    """
+    contact = data.get("contact")
+    if not isinstance(contact, dict):
+        contact = {}
+        data["contact"] = contact
+
+    for key, source in (
+        ("email", "email"),
+        ("phone", "phone"),
+        ("linkedin", "linkedin_url"),
+        ("location", "location"),
+    ):
+        if not str(contact.get(key) or "").strip():
+            value = user.get(source)
+            if value:
+                contact[key] = value
+
+
+def _phase(name: str, **extra) -> dict:
+    """One progress event. The label travels with it so the client never has to
+    keep its own copy of these strings."""
+    return {"phase": name, "label": PHASES[name], **extra}
+
+
+def _error(http_status: int, detail: str) -> dict:
+    return {
+        "phase": "error",
+        "label": PHASES["error"],
+        "status": http_status,
+        "detail": detail,
+    }
+
+
+async def _with_phases(source):
+    """Adapts a helper that yields phase events and finally its result.
+
+    Yields (event, None) for each phase and (None, result) for the result, so
+    the caller can tell them apart without a sentinel value that a real result
+    might one day equal.
+    """
+    async for item in source:
+        if isinstance(item, dict) and "phase" in item:
+            yield item, None
+        else:
+            yield None, item
+
+
+@dataclass
+class _Tally:
+    """Adds up what one generation cost across however many calls it made.
+
+    A generation is one call by default and three with LLM_REFINE=on, and the
+    number worth showing is what the whole thing cost, not what the first call
+    did. Carried explicitly rather than kept in module state because two
+    requests can be in flight at once and a shared counter would mix them.
+    """
+
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    calls: int = 0
+
+    def add(self, completion: "llm.Completion") -> None:
+        self.prompt_tokens += completion.prompt_tokens
+        self.completion_tokens += completion.completion_tokens
+        self.calls += 1
+
+    def as_dict(self) -> dict[str, int]:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.prompt_tokens + self.completion_tokens,
+            "calls": self.calls,
+        }
+
+
+def _left(deadline: float) -> float:
+    """Seconds still available before this request must be answered."""
+    return deadline - time.monotonic()
+
+
+# How many times to go back for the terms still missing. Two is enough in
+# practice: the first pass usually clears all of them and the second mops up a
+# word form the model got wrong. Past that it is paying for the same answer.
+MAX_COVERAGE_ROUNDS = 2
+
+
+async def _cover_missing_terms(
+    resume: ResumeDoc, deadline: float, tally: _Tally
+):
+    """Ask for sentences covering the terms the sample sentences left out.
+
+    The schema checks coverage but cannot fix it, and telling the candidate
+    which terms were missed leaves them writing the line by hand — which is the
+    work they came here to avoid. So the gap is closed by asking, and only
+    what is still missing after that is reported.
+
+    Best-effort by design: this runs after a resume has already been generated
+    and validated, so a failure here costs some sample sentences, never the
+    resume. Any error is logged and swallowed.
+
+    Yields a phase event before each round it actually makes, then the resume.
+    The event is emitted here, past every reason this pass might not run, so a
+    generation that skips it never claims to have done it.
+    """
+    if not settings.llm_refine:
+        yield resume
+        return
+
+    for round_number in range(MAX_COVERAGE_ROUNDS):
+        missing = resume.posting.uncovered_terms
+        if not missing:
+            yield resume
+            return
+        if _left(deadline) < llm.MIN_BUDGET:
+            logger.info("No time left for the coverage pass; returning as generated.")
+            yield resume
+            return
+
+        yield _phase("coverage", terms=len(missing), round=round_number + 1)
+        try:
+            completion = await llm.chat(
+                build_coverage_messages(missing, resume.posting.sample_sentences),
+                json_mode=True,
+                budget=_left(deadline),
+            )
+            tally.add(completion)
+            payload = llm.extract_json(completion.text)
+        except llm.LLMError as exc:
+            logger.warning("Could not cover %d missing term(s): %s", len(missing), exc)
+            yield resume
+            return
+
+        extra = payload.get("sentences")
+        if not isinstance(extra, list) or not extra:
+            logger.warning("Coverage pass returned no sentences for: %s", ", ".join(missing))
+            yield resume
+            return
+
+        data = resume.model_dump(mode="json")
+        # Deduped as they are merged. Round two is asked about the terms round
+        # one failed to cover, and a model that answers both rounds with the
+        # same sentence would otherwise have it listed twice — which reads as
+        # a mistake in the panel, and is one.
+        merged_sentences: list[str] = []
+        seen_sentences: set[str] = set()
+        for sentence in (*resume.posting.sample_sentences, *extra):
+            text = str(sentence).strip()
+            key = text.casefold()
+            if not text or key in seen_sentences:
+                continue
+            seen_sentences.add(key)
+            merged_sentences.append(text)
+        data["posting"]["sample_sentences"] = merged_sentences
+        try:
+            # Re-validating is what re-runs the check, so the next round sees
+            # only what these new sentences still failed to cover.
+            grown = ResumeDoc.model_validate(data)
+        except ValidationError as exc:
+            logger.warning("Coverage pass produced an unusable shape: %s", exc)
+            yield resume
+            return
+
+        # A round that covered nothing new will not do better for being repeated.
+        if len(grown.posting.uncovered_terms) >= len(missing):
+            yield grown
+            return
+        resume = grown
+
+    yield resume
+
+
+def _experience_text(user: dict) -> str:
+    """Everything the profile says about where this person has worked.
+
+    Only the experience entries: the roles, the employers and what was done in
+    them. Skills the person listed are a claim; the experience is the account
+    of the work behind it, and it is what the green marking below is asked to
+    check a line against.
+    """
+    parts: list[str] = []
+    for entry in user.get("experiences") or []:
+        for key in ("position", "company", "details"):
+            value = entry.get(key)
+            if value:
+                parts.append(str(value))
+    return "\n".join(parts)
+
+
+# One revision round. The first pass has the profile and the posting in front
+# of it and should not need a second; when it does, once is enough to catch the
+# sentence it skimmed. Twice starts rewriting a document that was already fine.
+MAX_MATCH_ROUNDS = 1
+
+
+def _missed_matches(resume: ResumeDoc, user: dict) -> list[str]:
+    """Posting terms the PROFILE evidences that the RESUME does not contain.
+
+    Not a gap in the candidate — the profile has these. They are matches the
+    document dropped, usually because the profile and the posting called the
+    same thing by different names, or because the sentence sat in a role that
+    got summarised away. Matched by the same rule everywhere else in this app:
+    whole terms, case-insensitive, no stemming.
+    """
+    posting = resume.posting
+    listed = [
+        *posting.hard_skills,
+        *posting.tech_stack,
+        *posting.soft_skills,
+        *posting.keywords,
+    ]
+    if not listed:
+        return []
+
+    evidenced = terms.present(format_profile(user), listed)
+    return terms.missing(render.all_text(resume), evidenced)
+
+
+async def _close_missed_matches(
+    resume: ResumeDoc, user: dict, deadline: float, tally: _Tally
+):
+    """Asks for the dropped matches to be worked back in from the profile.
+
+    Best-effort, like the coverage pass: this runs after a valid resume exists,
+    so any failure costs the revision and never the resume. The result is
+    merged through `humanize.merge`, which accepts only prose — bullets,
+    details, headline, summary — and copies every factual field from the
+    resume we already had. So this round can improve the wording and cannot
+    invent an employer, a date or a skill, whatever comes back.
+
+    Yields a phase event before each round it actually makes, then the resume.
+    Like the coverage pass, the event sits past every reason this might not
+    run, so it is never announced for work that did not happen.
+    """
+    for round_number in range(MAX_MATCH_ROUNDS if settings.llm_refine else 0):
+        missed = _missed_matches(resume, user)
+        if not missed:
+            break
+        if _left(deadline) < llm.MIN_BUDGET:
+            logger.info("No time left for the match pass; returning as generated.")
+            break
+
+        yield _phase("matching", terms=len(missed), round=round_number + 1)
+        try:
+            completion = await llm.chat(
+                build_match_messages(resume.model_dump(mode="json"), user, missed),
+                json_mode=True,
+                budget=_left(deadline),
+            )
+            tally.add(completion)
+            revision = llm.extract_json(completion.text)
+        except llm.LLMError as exc:
+            logger.warning("Could not recover %d missed match(es): %s", len(missed), exc)
+            break
+
+        try:
+            merged, report = humanize.merge(resume, revision)
+        except ValidationError as exc:
+            logger.warning("Match pass produced an unusable shape: %s", exc)
+            break
+
+        if report["ignored_count"]:
+            logger.info(
+                "Match pass tried to change %d protected field(s): %s",
+                report["ignored_count"],
+                ", ".join(report["ignored_changes"]),
+            )
+
+        still = _missed_matches(merged, user)
+        # A round that recovered nothing has not understood the ask, and its
+        # rewrite is not worth taking in exchange.
+        if len(still) >= len(missed):
+            logger.info("Match pass recovered nothing; keeping the original resume.")
+            break
+        logger.info(
+            "Match pass recovered %d term(s): %s",
+            len(missed) - len(still),
+            ", ".join(t for t in missed if t not in still),
+        )
+        resume = merged
+
+    resume.missed_terms = _missed_matches(resume, user)
+    yield resume
+
+
+def _mark_profile_terms(resume: ResumeDoc, user: dict) -> ResumeDoc:
+    """Which sample sentences this profile's EXPERIENCE fully backs.
+
+    A line is marked only when every posting term it uses appears in the
+    experience — not one of them, all of them. The distinction is the whole
+    point: a sentence about deep learning in PyTorch on AWS, where the
+    experience mentions only AWS, is not a line this person can stand behind,
+    and marking it would say they could. So the mark means "every term in this
+    line is accounted for by work already described", and a line that is only
+    partly covered reads the same as one that is not covered at all — which is
+    correct, because both need editing before they are true.
+
+    Matched by the same rule the coverage check uses: whole terms, case
+    insensitive, no stemming. A looser rule would mark a line on a resemblance
+    a screener would not count.
+    """
+    posting = resume.posting
+    listed = [
+        *posting.hard_skills,
+        *posting.tech_stack,
+        *posting.soft_skills,
+        *posting.keywords,
+    ]
+    if not listed or not posting.sample_sentences:
+        return resume
+
+    experience = _experience_text(user)
+    backed = terms.present(experience, listed)
+    known = {term.casefold() for term in backed}
+    posting.terms_in_profile = backed
+
+    marked: list[int] = []
+    for position, sentence in enumerate(posting.sample_sentences, start=1):
+        used = [term for term in listed if terms.mentions(sentence, term)]
+        # A sentence naming no listed term at all is not "fully covered" — it
+        # is uncheckable, and `all()` over an empty list would quietly call it
+        # covered.
+        if used and all(term.casefold() in known for term in used):
+            marked.append(position)
+    posting.sentences_in_profile = marked
+    return resume
 
 
 def _present(record: dict) -> dict:

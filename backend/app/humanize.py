@@ -98,12 +98,26 @@ def merge(original: ResumeDoc, rewrite: dict[str, Any]) -> tuple[ResumeDoc, dict
         ignored.append("full_name")
     if isinstance(rewrite.get("contact"), dict) and rewrite["contact"] != base.get("contact"):
         ignored.append("contact")
-    if isinstance(rewrite.get("skills"), dict) and rewrite["skills"] != base.get("skills"):
+    if "skills" in rewrite and rewrite["skills"] != base.get("skills"):
         ignored.append("skills")
+    if "gaps" in rewrite and rewrite["gaps"] != base.get("gaps", []):
+        ignored.append("gaps")
+    if "wants" in rewrite and rewrite["wants"] != base.get("wants", []):
+        ignored.append("wants")
+    if "posting" in rewrite and rewrite["posting"] != base.get("posting", {}):
+        ignored.append("posting")
 
     out["full_name"] = base["full_name"]
     out["contact"] = base.get("contact", {})
     out["skills"] = base.get("skills", {})
+    # Belongs to the generation pass: a wording rewrite cannot change what the
+    # profile does or does not evidence.
+    out["gaps"] = base.get("gaps", [])
+    out["wants"] = base.get("wants", [])
+    out["wants_met"] = base.get("wants_met", [])
+    # A reading of the job description. Rewording the resume cannot change what
+    # the advertisement asked for.
+    out["posting"] = base.get("posting", {})
 
     merged = ResumeDoc.model_validate(out)
     return merged, {"ignored_changes": ignored, "ignored_count": len(ignored)}
