@@ -134,8 +134,22 @@ Rules:
 dates, degrees, titles, metrics or technologies. If the profile lacks something \
 the posting asks for, leave it out rather than fabricating it.
 - Reorder the candidate's real experience so the parts most relevant to the \
-posting come first, and describe them in the posting's own vocabulary.
-- Turn each role's details into concrete, outcome-oriented bullets.
+posting come first. Reordering ROLES is always allowed; rewording is not — see \
+the two groups below.
+- Each role's lines arrive in two labelled groups, and they are handled \
+DIFFERENTLY. This is the most important rule on this page:
+  - **KEEP EXACTLY** — the candidate's own account of the work. Copy each of \
+these lines into that role's `bullets` word for word. Do not reword them, \
+shorten them, merge two into one, split one into two, reorder them, swap in \
+the posting's vocabulary, or "improve" them. One line in, one bullet out, \
+identical. They are the candidate's own statement of what they did, and this \
+document is going out under their name.
+  - **TAILOR THESE** — lines added for this posting. These are the ones you \
+rewrite: recast each as what this candidate did in that role, in the posting's \
+words, following the bullet rules below. One line in, one bullet out.
+  - Put the KEEP EXACTLY bullets first, in their original order, then the \
+tailored ones after them, in the same role. A role with no TAILOR THESE group \
+is copied straight through.
 - Copy contact details and dates from the profile exactly as given. This \
 includes Location: put the profile's city on the resume unchanged, and leave \
 `location` out entirely when the profile has none. Never infer one from an \
@@ -162,11 +176,15 @@ writer skimmed. Every such sentence is a match already paid for. Use it.
 Then the rules below, which are how those sentences become the document.
 
 The experience section is the bulk of the page and the part a screener weighs \
-most, so it gets the most work. Seven rules:
-- **One bullet per point in the profile.** Read the role's details and count \
-the sentences; each one becomes its own bullet. A role whose details hold five \
-separate points gets five bullets, not three good ones and two thrown away. \
-Never compress two of the candidate's accomplishments into one line.
+most, so it gets the most work.
+
+THE SEVEN RULES BELOW GOVERN THE **TAILOR THESE** LINES ONLY. A KEEP EXACTLY \
+line is copied through untouched and none of these rules apply to it — not the \
+word count, not the vocabulary swap, not the verb variety. Where a rule below \
+and the copy-exactly rule disagree, copy-exactly wins.
+- **One bullet per line, both groups.** Never compress two of the candidate's \
+points into one line, and never drop one. A role with four KEEP EXACTLY lines \
+and three TAILOR THESE lines produces seven bullets.
 - **Write each bullet as: what was done -> how, or with what -> what changed \
 as a result -> in the posting's words.** There is room for all four, so aim for \
 16 to 34 words. Under 10 words is too thin to keep; over 40 stops being read.
@@ -334,18 +352,27 @@ def format_profile(user: dict[str, Any]) -> str:
                 f"- {exp.get('position') or '?'} at {exp.get('company') or '?'} "
                 f"({_format_range(exp)})"
             )
-            if exp.get("details"):
-                for detail in str(exp["details"]).splitlines():
-                    if detail.strip():
-                        lines.append(f"    {detail.strip()}")
-            # Rendered exactly like the details above — no marker. The two stay
-            # in separate tables, which is what makes "clear the suggestions,
-            # keep my own words" possible; here they are one account of the
-            # role, because the candidate attached these to it and the resume
-            # should read as one voice rather than as evidence plus footnotes.
-            for sentence in exp.get("inserted") or []:
-                if str(sentence).strip():
-                    lines.append(f"    {str(sentence).strip()}")
+            # The two groups are labelled, because the model is asked to treat
+            # them differently: the candidate's own lines are copied through
+            # untouched, the added ones are the only thing it may rewrite.
+            # Without the labels that instruction has nothing to act on.
+            details = [
+                line.strip()
+                for line in str(exp.get("details") or "").splitlines()
+                if line.strip()
+            ]
+            added = [
+                str(s).strip() for s in (exp.get("inserted") or []) if str(s).strip()
+            ]
+
+            if details:
+                lines.append("  KEEP EXACTLY (the candidate's own words):")
+                for detail in details:
+                    lines.append(f"    {detail}")
+            if added:
+                lines.append("  TAILOR THESE (added for this posting):")
+                for sentence in added:
+                    lines.append(f"    {sentence}")
 
     projects = user.get("projects") or []
     if projects:
