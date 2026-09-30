@@ -108,6 +108,44 @@ export default function HomePage() {
   // as text to drop into a role and rewrite.
   const [experienceSuggestions, setExperienceSuggestions] = useState([])
 
+  // 'idle' | 'confirm' | 'working'. Clearing cannot be undone, so the button
+  // asks once before it does anything.
+  const [formatState, setFormatState] = useState('idle')
+
+  /** How many inserted sentences the selected profile is carrying. */
+  const insertedCount = (selected?.experiences ?? []).reduce(
+    (total, exp) => total + (exp.inserted?.length ?? 0),
+    0,
+  )
+
+  /**
+   * Removes every sentence added with Insert, leaving the details the user
+   * typed exactly as they are.
+   *
+   * Its own endpoint rather than a save: the promise the button makes is that
+   * it cannot reach `details`, and only a call that touches one table can keep
+   * it. The profile is re-fetched afterwards so the count beside the button —
+   * and anything the panel below shows — matches what is now stored.
+   */
+  const formatInserted = async () => {
+    if (!selected) return
+    setFormatState('working')
+    try {
+      const fresh = await api.users.clearInserted(selected.id)
+      setDetail(fresh)
+      setDetailVersion((n) => n + 1)
+      await loadUsers()
+      toast.success(
+        'Inserted sentences cleared',
+        'Your own Details are unchanged.',
+      )
+    } catch (err) {
+      toast.error('Could not clear them', err.message)
+    } finally {
+      setFormatState('idle')
+    }
+  }
+
   const handleUserSaved = async (saved, message) => {
     setEditOpen(false)
     setSkillSuggestions([])
@@ -516,14 +554,63 @@ export default function HomePage() {
                 <h2 className={`${styles.cardTitle} ${styles.cardHeadTitle}`}>
                   Selected
                 </h2>
-                <button
-                  type="button"
-                  className={styles.ghost}
-                  onClick={() => setEditOpen(true)}
-                >
-                  Edit user information
-                </button>
+                <div className={styles.cardHeadActions}>
+                  <button
+                    type="button"
+                    className={styles.ghost}
+                    onClick={() => setEditOpen(true)}
+                  >
+                    Edit user information
+                  </button>
+                  {/* Only when there is something to clear — a profile with no
+                      inserted sentences does not need a button that would do
+                      nothing, and an always-present one beside Edit would read
+                      as part of editing. */}
+                  {insertedCount > 0 && (
+                    <button
+                      type="button"
+                      className={styles.ghost}
+                      onClick={() => setFormatState('confirm')}
+                      disabled={formatState !== 'idle'}
+                      title={`Remove the ${insertedCount} sentence${
+                        insertedCount === 1 ? '' : 's'
+                      } added with Insert. Your own Details are untouched.`}
+                    >
+                      {formatState === 'working'
+                        ? 'Clearing…'
+                        : `Format inserted experiences (${insertedCount})`}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* The confirm sits under the header rather than inside it: the
+                  question and its two answers do not fit beside the title at
+                  this width, and a destructive choice should not be something
+                  you hit while reaching for Edit. */}
+              {formatState === 'confirm' && (
+                <div className={styles.formatConfirmBar}>
+                  <span className={styles.formatWarn}>
+                    Remove {insertedCount} inserted{' '}
+                    {insertedCount === 1 ? 'sentence' : 'sentences'}? Your own
+                    Details stay exactly as they are.
+                  </span>
+                  <button
+                    type="button"
+                    className={styles.formatConfirm}
+                    onClick={formatInserted}
+                  >
+                    Remove them
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatCancel}
+                    onClick={() => setFormatState('idle')}
+                  >
+                    Keep them
+                  </button>
+                </div>
+              )}
               <dl className={styles.details}>
                 {/* Each value is one line with an ellipsis past the column's
                     width, so `title` is what makes the whole thing readable. */}

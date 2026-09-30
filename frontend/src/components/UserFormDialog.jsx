@@ -119,9 +119,6 @@ export default function UserFormDialog({
   const [projErrors, setProjErrors] = useState({})
   const [submitError, setSubmitError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  // 'idle' | 'confirm' | 'working'. Clearing cannot be undone, so the button
-  // asks once before it does anything.
-  const [formatState, setFormatState] = useState('idle')
   // Which suggested skills to add, and where to file them. The group is a
   // batch choice rather than one per skill: whatever it is set to, the four
   // group boxes below are ordinary text and anything can be moved before
@@ -340,48 +337,6 @@ export default function UserFormDialog({
 
   const experienceHandlers = listHandlers(setExperiences, setExpErrors, newExperience)
 
-  /** How many sentences the Format button would remove. */
-  const insertedCount = experiences.reduce(
-    (total, row) => total + (row.inserted?.length ?? 0),
-    0,
-  )
-
-  /**
-   * Clears every inserted sentence for this user and leaves the details alone.
-   *
-   * Goes straight to the server rather than emptying the lists in form state
-   * and waiting for Save: the promise this button makes is that it cannot
-   * touch what the user typed, and a full save of a form they may have been
-   * halfway through editing would not keep it. An unsaved role — one with no
-   * id yet — has nothing stored, so clearing its list locally is the whole job
-   * for that row.
-   */
-  const formatInserted = async () => {
-    if (!editingId) {
-      setExperiences((prev) => prev.map((row) => ({ ...row, inserted: [] })))
-      setFormatState('idle')
-      return
-    }
-    setFormatState('working')
-    setSubmitError(null)
-    try {
-      const fresh = await api.users.clearInserted(editingId)
-      // Only the inserted lists are taken from the response. Refilling the
-      // whole form would throw away edits made since the dialog opened, which
-      // is exactly the surprise this button is meant not to spring.
-      const byId = new Map(
-        (fresh?.experiences ?? []).map((exp) => [exp.id, exp.inserted ?? []]),
-      )
-      setExperiences((prev) =>
-        prev.map((row) => ({ ...row, inserted: row.id ? byId.get(row.id) ?? [] : [] })),
-      )
-      setInsertedWants(new Set())
-      setFormatState('idle')
-    } catch (err) {
-      setSubmitError(err.message ?? 'Could not clear the inserted sentences.')
-      setFormatState('idle')
-    }
-  }
   const educationHandlers = listHandlers(setEducation, setEduErrors, () =>
     newSimpleEntry('university'),
   )
@@ -667,56 +622,6 @@ export default function UserFormDialog({
                     )
                   })}
                 </ul>
-              </div>
-            )}
-
-            {/* Only when there is something to clear — an empty profile does
-                not need a button that would do nothing. */}
-            {insertedCount > 0 && (
-              <div className={styles.formatBar}>
-                {formatState === 'confirm' ? (
-                  <>
-                    <span className={styles.formatWarn}>
-                      Remove {insertedCount} inserted{' '}
-                      {insertedCount === 1 ? 'sentence' : 'sentences'}? Your own
-                      Details stay exactly as they are.
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.formatConfirm}
-                      onClick={formatInserted}
-                      disabled={submitting}
-                    >
-                      Remove them
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.formatCancel}
-                      onClick={() => setFormatState('idle')}
-                      disabled={submitting}
-                    >
-                      Keep them
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className={styles.formatLede}>
-                      {insertedCount} inserted{' '}
-                      {insertedCount === 1 ? 'sentence' : 'sentences'} across your
-                      roles, kept apart from what you typed.
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.formatButton}
-                      onClick={() => setFormatState('confirm')}
-                      disabled={submitting || formatState === 'working'}
-                    >
-                      {formatState === 'working'
-                        ? 'Clearing…'
-                        : 'Format inserted experiences'}
-                    </button>
-                  </>
-                )}
               </div>
             )}
 

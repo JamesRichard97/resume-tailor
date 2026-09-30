@@ -125,7 +125,9 @@
    .cardTitle's bottom margin, so it is dropped there and the row keeps it. */
 .cardHead {
   display: flex;
-  align-items: center;
+  /* Top, not centre: the actions can wrap to two rows in this narrow column,
+     and centring leaves the heading floating in the middle of them. */
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
@@ -133,6 +135,74 @@
 
 .cardHeadTitle {
   margin-bottom: 0;
+  /* Lines the heading up with the text inside the first button rather than
+     with its border. */
+  padding-top: 7px;
+}
+
+/* Two buttons where there used to be one. Wraps rather than squeezing, because
+   "Format inserted experiences (7)" is long and this column is narrow. */
+.cardHeadActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The confirm step, under the header. */
+.formatConfirmBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.formatWarn {
+  flex: 1 1 200px;
+  font-size: calc(12px * var(--font-scale));
+  line-height: 18px;
+  color: var(--text);
+}
+
+.formatConfirm,
+.formatCancel {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-size: calc(12px * var(--font-scale));
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Only the destructive one is coloured, so the two answers cannot be mistaken
+   for each other at a glance. */
+.formatConfirm {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.formatConfirm:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.formatCancel:hover {
+  border-color: var(--text-muted);
+}
+
+.formatConfirm:focus-visible,
+.formatCancel:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 .label {
