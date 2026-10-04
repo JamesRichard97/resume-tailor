@@ -213,7 +213,7 @@ title Resume Tailor - Web
 cd /d "%FRONTEND%"
 echo Starting the web app on http://localhost:%WEB_PORT%   (Ctrl+C to stop)
 echo.
-call npm run dev -- --port %WEB_PORT% --strictPort
+call npm run dev -- --port %WEB_PORT% --strictPort --host
 echo.
 echo Web app stopped.
 pause
